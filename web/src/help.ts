@@ -154,6 +154,17 @@ export const HELP: Topic[] = [
         ],
       },
       {
+        id: "family",
+        title: "Seeing your router from Beyond Family",
+        words: "beyond family away remote phone app link code home network see from work",
+        body: [
+          "Link the router to Beyond Family and a grown-up in your household can see, from anywhere, whether the internet's working at home, how fast it's going and which devices are online. Your Beyond TVs show alongside.",
+          "In **Settings**, tap **Connect to Beyond Family**. The router shows a six letter code. In the Beyond Family app, open **Family**, then **Home network**, and type it. It links within a few seconds.",
+          "It's look only: nothing in Beyond Family can change your router. Each minute the router sends the names you gave your devices and whether each is online, never their addresses, your Wi-Fi password or what anyone does online.",
+          "To stop, tap **Unlink** here or in Beyond Family. Either one ends it straight away.",
+        ],
+      },
+      {
         id: "way-back",
         title: "Going back to your old router",
         words: "undo old router go back remove uninstall original",
@@ -176,7 +187,8 @@ export const HELP: Topic[] = [
         title: "Privacy",
         words: "privacy data tracking what does it send",
         body: [
-          "What happens in your house stays on your router: your devices, their names and what they do are never sent to Beyond.",
+          "What happens in your house stays on your router: your devices, their names and what they do are never sent to Beyond, unless you link the router to Beyond Family.",
+          "If you do, it sends the names you gave your devices and whether each is online, once a minute, only to your own household. Never their addresses or what anyone does online. Unlink and it stops.",
           "Once a night the router asks GitHub, where Beyond's releases live, whether there's a new version. That's all it sends.",
         ],
       },

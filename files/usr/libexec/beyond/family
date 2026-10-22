@@ -1,0 +1,105 @@
+#!/bin/sh
+# Beyond Family link: lets a grown-up in the household see this router from anywhere. Look only: the router calls
+# out, Beyond Family answers "linked" or "not linked", and nothing it says can change anything here.
+#
+#   family link     get a code to type into Beyond Family (Family > Home network), or a fresh one
+#   family report   what cron runs every minute once a code was asked for: how the home network is doing
+#   family unlink   tell Beyond Family to forget this router, then forget the link here
+#
+# The report holds the names the family gave their devices and whether each is online, never an address.
+
+API="${BEYOND_FAMILY_URL:-https://beyondfamily.app/api}"
+ETC="${BEYOND_ETC:-/etc/beyond}"
+DIR="${BEYOND_FAMILY_DIR:-/tmp/beyond-family}"
+FILE="$ETC/family"
+FETCH="${BEYOND_FETCH:-uclient-fetch -q -T 20}"
+
+mkdir -p "$DIR"
+
+value() { sed -n "s/^$1=//p" "$FILE" 2>/dev/null | head -1; }
+field() { printf '%s' "$1" | jsonfilter -e "@.$2" 2>/dev/null; }
+say() { printf '%s\n' "$1" >"$DIR/message"; }
+
+# The link lives in /etc so it survives a restart and an update. Only root can read it: it holds the secret.
+keep() {
+	(umask 077; printf 'id=%s\nsecret=%s\nlinked=%s\n' "$1" "$2" "$3" >"$FILE.new") && mv "$FILE.new" "$FILE"
+}
+
+forget() { rm -f "$FILE" "$DIR/code" "$DIR/checked"; }
+
+# Written only when it changes, so a report a minute does not wear out the flash.
+linked() {
+	[ "$(value linked)" = "$1" ] || keep "$(value id)" "$(value secret)" "$1"
+	[ "$1" = 1 ] && rm -f "$DIR/code"
+	rm -f "$DIR/message"
+}
+
+creds() { printf '"id":"%s","secret":"%s"' "$(value id)" "$(value secret)"; }
+
+# post path body: the answer on stdout. Returns 2 when Beyond Family no longer knows this router (unlinked there).
+post() {
+	if $FETCH -O - --post-data="$2" "$API$1" 2>"$DIR/error"; then
+		rm -f "$DIR/error"
+		return 0
+	fi
+	grep -q 401 "$DIR/error" && { rm -f "$DIR/error"; return 2; }
+	rm -f "$DIR/error"
+	return 1
+}
+
+show_code() { # answer
+	code=$(field "$1" code) minutes=$(field "$1" minutes)
+	case "$code" in '' | *[!A-Z0-9\ ]*) say "Beyond Family sent something unexpected. Try again."; return 1 ;; esac
+	case "$minutes" in '' | *[!0-9]*) minutes=10 ;; esac
+	printf '%s\n%s\n' "$code" "$(($(date +%s) + minutes * 60))" >"$DIR/code"
+	rm -f "$DIR/message"
+}
+
+link() {
+	if [ -z "$(value id)" ]; then
+		a=$(post /gateway/hello '{}') || { say "Couldn't reach Beyond Family. Check the internet is working and try again."; return 1; }
+		id=$(field "$a" id) secret=$(field "$a" secret)
+		# Checked before either goes into a file or a request.
+		printf '%s' "$id" | grep -Eqx '[0-9a-f-]{36}' && printf '%s' "$secret" | grep -Eqx '[A-Za-z0-9_-]{43}' ||
+			{ say "Beyond Family sent something unexpected. Try again."; return 1; }
+		keep "$id" "$secret" 0
+		show_code "$a"
+		return
+	fi
+	a=$(post /gateway/code "{$(creds)}")
+	case $? in
+		0) ;;
+		2) forget; link; return ;;
+		*) say "Couldn't reach Beyond Family. Check the internet is working and try again."; return 1 ;;
+	esac
+	if [ "$(field "$a" linked)" = true ]; then linked 1; else show_code "$a"; fi
+}
+
+report() {
+	[ -n "$(value id)" ] || return 0
+	# ubus prints it indented; JSON keeps any real newline or tab inside a name escaped, so these are only layout.
+	r=$(ubus call beyond family_report | tr -d '\n\t')
+	[ -n "$r" ] || return 1
+	a=$(post /gateway/report "{$(creds),${r#*\{}")
+	case $? in
+		0) ;;
+		2) forget; return 0 ;;
+		*) return 1 ;;
+	esac
+	date +%s >"$DIR/checked"
+	if [ "$(field "$a" linked)" = true ]; then linked 1; else linked 0; fi
+}
+
+unlink() {
+	[ -n "$(value id)" ] && post /gateway/bye "{$(creds)}" >/dev/null
+	forget
+	rm -f "$DIR/message"
+	return 0
+}
+
+case "$1" in
+	link) link ;;
+	report) report ;;
+	unlink) unlink ;;
+	*) sed -n '2,9p' "$0" >&2; exit 1 ;;
+esac

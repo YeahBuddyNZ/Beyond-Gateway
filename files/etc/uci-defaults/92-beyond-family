@@ -1,0 +1,10 @@
+#!/bin/sh
+# Every version, first boot: the Beyond Family report, once a minute. It does nothing until somebody taps
+# Connect to Beyond Family in Settings, so a router that is never linked never calls out.
+
+touch /etc/crontabs/root
+sed -i '/\/usr\/libexec\/beyond\/family/d' /etc/crontabs/root
+echo "* * * * * /usr/libexec/beyond/family report" >>/etc/crontabs/root
+/etc/init.d/cron enable
+
+exit 0

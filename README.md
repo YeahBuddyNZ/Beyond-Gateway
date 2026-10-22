@@ -30,6 +30,8 @@ Free and open source, built in Aotearoa by [Beyond](https://gobeyond.co.nz). The
 <td><img src="docs/screenshots/help-search-phone.jpg" alt="Searching the help on a phone"></td></tr>
 <tr><td><img src="docs/screenshots/wifi-qr.jpg" alt="Join with a QR code: point a phone's camera at it, no password to type"></td>
 <td><img src="docs/screenshots/wifi-card.jpg" alt="A printed Join our Wi-Fi card for the fridge, with the QR code, name and password"></td></tr>
+<tr><td><img src="docs/screenshots/family-code.jpg" alt="Connect to Beyond Family: a six letter code to type into the Beyond Family app"></td>
+<td><img src="docs/screenshots/family-linked.jpg" alt="Linked to Beyond Family, look only"></td></tr>
 </table>
 
 ## What you get
@@ -39,9 +41,10 @@ Free and open source, built in Aotearoa by [Beyond](https://gobeyond.co.nz). The
 - **Your home at a glance.** Internet, the router and your devices, live speed, and anything that joined today.
 - **Pause anything.** Every phone, TV and console in the house, with one switch each. It stays on the Wi-Fi and comes straight back when you un-pause it.
 - **Join with a QR code.** Visitors point their phone's camera at the code on the *Wi-Fi* page and they're on, no password to type. *Print a card for the fridge* puts it on paper.
+- **See it from anywhere in [Beyond Family](https://beyondfamily.app).** *Connect to Beyond Family* in *Settings* shows a code; type it under *Family*, *Home network*, and a grown-up can see from work whether the internet's up at home and who's online, with your Beyond TVs alongside. Look only: nothing there can change the router.
 - **Keeps itself up to date.** It checks each night and installs only versions Beyond has signed, keeping every setting. One press, or turn on *Install updates by themselves*.
 - **Help inside the app.** Plain answers on every screen, and the same answers at [gobeyond.nz/gateway](https://gobeyond.nz/gateway).
-- **Private.** Your devices and what they do never leave the house. The only thing it asks the internet is whether there's a new version.
+- **Private.** Your devices and what they do never leave the house. It asks the internet whether there's a new version, and, only if you link it to Beyond Family, sends your household the names you gave your devices and whether each is online.
 - **Beyond's look.** The four dots, Beyond's purple and Sora, the same family as [Beyond™ TV](https://github.com/YeahBuddyNZ/Beyond.TV) and [Beyond Family](https://beyondfamily.app).
 
 ## How it plugs in
@@ -57,7 +60,7 @@ On New Zealand fibre the box on the wall (the ONT) is separate from your provide
 
 1. **Per-person Wi-Fi passwords.** Each kid joins with their own password, so a pause follows them even if they change their phone's settings.
 2. **New devices wait for a grown-up.** Anything new joins a waiting list until someone says yes.
-3. **Beyond Family.** See and manage the router from the Beyond Family app when you're out, with your Beyond TVs alongside. Read-only first, grown-ups only, and an email on every change.
+3. **Beyond Family, managing.** Seeing the router from Beyond Family is here (look only). Next: pausing a device from your phone, grown-ups only, with an email on every change.
 4. **Guest Wi-Fi** with a QR code for the TV or the fridge.
 5. **Beyond Shield:** ads and scam sites blocked for the whole house.
 6. **A second router as a mesh point** for big houses.
@@ -140,6 +143,8 @@ The same answers as the app's *Help* (`web/src/help.ts`).
 
 **Joining with a QR code.** *Wi-Fi*, *Show the code*, and point a phone's camera at it. *Print a card for the fridge* prints it with the name and password. Change the password and print a new card: the old one stops working.
 
+**Seeing it from Beyond Family.** *Settings*, *Connect to Beyond Family*. In the Beyond Family app, *Family*, *Home network*, type the six letter code. *Unlink* on either side stops it straight away.
+
 **Pausing a device.** *Devices*, flick its switch. It stays on the Wi-Fi but can't reach the internet until you flick it back.
 
 **The internet is slow.** *Home* shows what's being used right now: a big number means something is downloading. Far from the router? Walls slow Wi-Fi down; a mesh point is coming.
@@ -185,6 +190,8 @@ Linux x86_64 with make, curl, zstd and Node.js 20 or newer. It builds the app, d
 ## Privacy
 
 What happens in your house stays on your router: your devices, their names and what they do are never sent anywhere. Once a night it asks GitHub, where Beyond's releases live, whether there's a new version.
+
+Linked to Beyond Family, it also sends your own household, once a minute: whether the internet is up and how fast, the names you gave your devices, and whether each is online, paused or new. Never a device's address (MAC or IP), its own name for itself, your Wi-Fi password or anything anyone does online. Beyond Family can't send the router anything back but "linked" or "not linked".
 
 ## Credits
 

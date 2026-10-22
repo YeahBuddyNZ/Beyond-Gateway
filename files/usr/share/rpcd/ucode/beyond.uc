@@ -168,6 +168,65 @@ function update_state() {
 	};
 }
 
+// What the router tells Beyond Family each minute once linked (files/usr/libexec/beyond/family). Names and states
+// only: no MAC, IP address or hostname leaves the house. Beyond Family's kinds are fewer, so a few are folded in.
+const FAMILY_KINDS = { laptop: 'computer', watch: 'other', printer: 'other' };
+const FAMILY_UPDATE = ['current', 'available', 'installing', 'off', 'error'];
+
+function family_report() {
+	let u = connect();
+	let wan = u.call('network.interface.wan', 'status', {}) ?? {};
+	let wan6 = u.call('network.interface.wan6', 'status', {}) ?? {};
+	let board = u.call('system', 'board', {}) ?? {};
+	let up = update_state(), cnt = counters(wan.l3_device);
+	let list = device_list();
+	remember(list);
+	let day = time() - 86400, devices = [];
+	for (let d in list)
+		push(devices, {
+			name: d.name ?? '',
+			kind: d.kind ? (FAMILY_KINDS[d.kind] ?? d.kind) : null,
+			online: !!d.online,
+			paused: !!d.paused,
+			wifi: !!d.wifi,
+			isNew: d.first_seen > day
+		});
+	// Online first, so the cap drops the long-gone ones.
+	devices = slice(sort(devices, (a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0)), 0, 250);
+	return {
+		version: up.version ?? '',
+		model: board.model ?? '',
+		wan: {
+			up: !!wan.up,
+			mode: cursor().get('beyond', 'main', 'wan_mode') ?? '',
+			ipv6: length(wan6['ipv6-address'] ?? []) > 0 || length(wan6['ipv6-prefix'] ?? []) > 0,
+			uptime: wan.uptime ?? 0,
+			rx: cnt.rx,
+			tx: cnt.tx
+		},
+		devices,
+		update: index(FAMILY_UPDATE, up.status) >= 0 ? up.status : ''
+	};
+}
+
+// What the Settings card shows. Never the secret.
+function family_state() {
+	let link = keyvalues('/etc/beyond/family');
+	let code = split(trim(readfile('/tmp/beyond-family/code') ?? ''), '\n');
+	let until = +(code[1] ?? 0), checked = +trim(readfile('/tmp/beyond-family/checked') ?? '0');
+	let waiting = !!link.id && link.linked != '1' && length(code[0]) > 0 && until > time();
+	// While a code is up, ask sooner than the minute cron does, so the card turns to "Linked" soon after.
+	if (waiting && time() - checked > 10)
+		system('/usr/libexec/beyond/family report >/dev/null 2>&1 &');
+	return {
+		linked: link.linked == '1',
+		code: waiting ? code[0] : null,
+		until: waiting ? until : null,
+		checked,
+		message: trim(readfile('/tmp/beyond-family/message') ?? '') || null
+	};
+}
+
 const methods = {
 	setup_state: {
 		call: function() {
@@ -334,6 +393,33 @@ const methods = {
 			c.set('beyond', 'updates', 'auto', req.args.on ? '1' : '0');
 			c.commit('beyond');
 			return { ok: true };
+		}
+	},
+
+	// Internal: for the family script, run as root. Not in the access list, so the app cannot call it.
+	family_report: {
+		call: function() {
+			return family_report();
+		}
+	},
+
+	family_state: {
+		call: function() {
+			return family_state();
+		}
+	},
+
+	family_link: {
+		call: function() {
+			system('/usr/libexec/beyond/family link >/dev/null 2>&1');
+			return family_state();
+		}
+	},
+
+	family_unlink: {
+		call: function() {
+			system('/usr/libexec/beyond/family unlink >/dev/null 2>&1');
+			return family_state();
 		}
 	},
 
