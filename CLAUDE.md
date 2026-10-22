@@ -6,8 +6,10 @@ Beyond's router: OpenWrt underneath, the Beyond app on top. Part of the Beyond t
 ## Ours
 
 - **Writing:** New Zealand English everywhere (copy, comments, commits). No em dashes. Dates DD/MM/YYYY. Brand is "Beyond™".
-- **Brand:** paper `#F7F6F2`, ink `#22221F`, ink-soft `#55534B`, moss `#2F7D6D` (the one thing to press), ember `#E8A33D`
-  (earned things only), the four dots (moss, ember, coral `#D85A30`, blue `#378ADD`). Sora for display type.
+- **Brand:** Beyond's own purple, as on gobeyond.nz (Kyle, 22/10/2026, "purple like our colours"): violet `#6E3DDB`
+  (the one thing to press), violet text `#6135D6`, lilac `#9E7BFF`, void `#0D0C18` to `#2C2458` on the home map. Paper
+  `#F7F6F2` and ink `#22221F` for reading, ember `#E8A33D` for earned things only, and the four dots as the mark.
+  Sora for display type. Tokens live once, on `:root` in `web/app.css`.
 - **People aren't technical.** Plain words on every screen ("Fibre (VLAN 10)", "Paused"), one primary button per screen,
   and say what will happen before it happens.
 - **Never flash or modify an ISP's router.** Beyond Gateway replaces it at the fibre box (ONT), or sits behind it.
