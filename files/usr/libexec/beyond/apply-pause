@@ -1,0 +1,25 @@
+#!/bin/sh
+# Writes the paused devices into the firewall: a paused device can still reach the router, but not the internet.
+# fw4 reads every file in /etc/nftables.d into its own table on each reload.
+#   apply-pause              write and reload the firewall
+#   apply-pause --no-reload  write only (at boot, before the firewall starts)
+
+OUT=/etc/nftables.d/20-beyond.nft
+macs=$(uci -q show beyond | sed -n "s/^beyond\.\([^.=]*\)\.paused='1'$/\1/p" | while read -r s; do
+	uci -q get beyond."$s".mac
+done | tr 'A-F' 'a-f' | grep -E '^([0-9a-f]{2}:){5}[0-9a-f]{2}$' | sort -u | tr '\n' ',' | sed 's/,$//')
+
+{
+	echo '# Written by Beyond Gateway (apply-pause). Changes here are overwritten.'
+	echo 'set beyond_paused {'
+	echo '	type ether_addr'
+	[ -n "$macs" ] && echo "	elements = { $(echo "$macs" | sed 's/,/, /g') }"
+	echo '}'
+	echo 'chain beyond_pause {'
+	echo '	type filter hook forward priority filter - 1; policy accept;'
+	echo '	ether saddr @beyond_paused drop'
+	echo '}'
+} >"$OUT.tmp" && mv "$OUT.tmp" "$OUT"
+
+[ "$1" = "--no-reload" ] || fw4 reload >/dev/null 2>&1
+exit 0

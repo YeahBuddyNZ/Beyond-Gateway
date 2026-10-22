@@ -1,0 +1,9 @@
+#!/bin/sh
+# Every test. Usage: sh tests/run.sh
+set -e
+cd "$(dirname "$0")/.."
+sh tests/wan-detect.test.sh
+sh tests/apply-pause.test.sh
+for f in files/usr/libexec/beyond/* files/etc/uci-defaults/* files/etc/init.d/*; do sh -n "$f"; done
+echo "ok   shell syntax"
+node --test tests/*.test.mjs

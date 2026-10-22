@@ -1,0 +1,280 @@
+// Beyond Gateway's ubus object, the only thing the Beyond app talks to (through uhttpd's /ubus).
+// Everything here runs as root inside rpcd; the ACL in /usr/share/rpcd/acl.d/beyond.json says who may call what.
+// Before setup, anyone on the LAN may ask setup_state and call finish_setup once; after that, only a logged in session.
+
+'use strict';
+
+import { readfile, popen } from 'fs';
+import { cursor } from 'uci';
+import { connect } from 'ubus';
+
+const MAC = /^([0-9a-f]{2}:){5}[0-9a-f]{2}$/;
+const KINDS = ['phone', 'laptop', 'tablet', 'tv', 'console', 'speaker', 'camera', 'watch', 'printer', 'computer', 'other'];
+
+function shellquote(s) {
+	return `'${replace(s, "'", "'\\''")}'`;
+}
+
+function section_for(mac) {
+	return 'd_' + replace(mac, ':', '');
+}
+
+function setup_done() {
+	return cursor().get('beyond', 'main', 'setup_done') == '1';
+}
+
+// The Wi-Fi networks people join: access points on the LAN (not a guest network, which comes later).
+function home_ifaces(c) {
+	let out = [];
+	c.foreach('wireless', 'wifi-iface', (s) => {
+		if ((s.mode ?? 'ap') == 'ap' && (s.network ?? 'lan') == 'lan' && s.beyond_guest != '1')
+			push(out, s['.name']);
+	});
+	return out;
+}
+
+function set_wifi(c, ssid, key) {
+	for (let name in home_ifaces(c)) {
+		c.set('wireless', name, 'ssid', ssid);
+		c.set('wireless', name, 'encryption', 'sae-mixed');
+		c.set('wireless', name, 'key', key);
+		c.set('wireless', name, 'disabled', '0');
+	}
+	c.commit('wireless');
+	system('wifi reload >/dev/null 2>&1 &');
+}
+
+function check_wifi(ssid, key) {
+	if (type(ssid) != 'string' || length(ssid) < 1 || length(ssid) > 32)
+		return 'The Wi-Fi name needs 1 to 32 characters.';
+	if (type(key) != 'string' || length(key) < 8 || length(key) > 63)
+		return 'The Wi-Fi password needs 8 to 63 characters.';
+	return null;
+}
+
+function counters(dev) {
+	if (!dev || !match(dev, /^[A-Za-z0-9._-]+$/))
+		return { rx: 0, tx: 0 };
+	return {
+		rx: +trim(readfile(`/sys/class/net/${dev}/statistics/rx_bytes`) ?? '0'),
+		tx: +trim(readfile(`/sys/class/net/${dev}/statistics/tx_bytes`) ?? '0')
+	};
+}
+
+function leases() {
+	let out = {};
+	for (let line in split(readfile('/tmp/dhcp.leases') ?? '', '\n')) {
+		let f = split(line, ' ');
+		if (length(f) >= 4 && match(lc(f[1]), MAC))
+			out[lc(f[1])] = { ip: f[2], hostname: f[3] == '*' ? null : f[3], expires: +f[0] };
+	}
+	return out;
+}
+
+function neighbours() {
+	let out = {};
+	let p = popen('ip -4 neigh show dev br-lan 2>/dev/null');
+	if (!p) return out;
+	for (let line = p.read('line'); length(line); line = p.read('line')) {
+		let m = match(trim(line), /^(\S+) lladdr (\S+) (\S+)/);
+		if (m && match(lc(m[2]), MAC))
+			out[lc(m[2])] = { ip: m[1], state: m[3] };
+	}
+	p.close();
+	return out;
+}
+
+function wifi_clients(u) {
+	let out = {};
+	for (let obj in (u.list('hostapd.*') ?? [])) {
+		let r = u.call(obj, 'get_clients', {});
+		for (let mac, info in (r?.clients ?? {}))
+			out[lc(mac)] = { signal: info.signal, iface: replace(obj, 'hostapd.', '') };
+	}
+	return out;
+}
+
+function device_list() {
+	let c = cursor();
+	let u = connect();
+	let lease = leases(), neigh = neighbours(), wifi = wifi_clients(u);
+	let known = {};
+	c.foreach('beyond', 'device', (s) => { if (s.mac) known[lc(s.mac)] = s; });
+
+	let macs = {};
+	for (let m in keys(lease)) macs[m] = true;
+	for (let m in keys(neigh)) macs[m] = true;
+	for (let m in keys(wifi)) macs[m] = true;
+	for (let m in keys(known)) macs[m] = true;
+
+	let out = [];
+	for (let mac in keys(macs)) {
+		let n = neigh[mac], l = lease[mac], w = wifi[mac], k = known[mac];
+		let online = !!w || (n && index(['REACHABLE', 'STALE', 'DELAY', 'PROBE'], n.state) >= 0);
+		push(out, {
+			mac,
+			ip: n?.ip ?? l?.ip,
+			hostname: l?.hostname,
+			name: k?.name,
+			kind: k?.kind,
+			paused: k?.paused == '1',
+			online,
+			wifi: !!w,
+			signal: w?.signal,
+			first_seen: +(k?.first_seen ?? 0)
+		});
+	}
+	return out;
+}
+
+// Remember devices the first time they turn up, so "new device joined" has something to compare against.
+function remember(list) {
+	let c = cursor(), changed = false;
+	for (let d in list) {
+		let s = section_for(d.mac);
+		if (!c.get('beyond', s)) {
+			c.set('beyond', s, 'device');
+			c.set('beyond', s, 'mac', d.mac);
+			c.set('beyond', s, 'first_seen', '' + time());
+			d.first_seen = time();
+			changed = true;
+		}
+	}
+	if (changed) c.commit('beyond');
+}
+
+const methods = {
+	setup_state: {
+		call: function() {
+			let board = connect().call('system', 'board', {});
+			return { setup_done: setup_done(), model: board?.model, wan_mode: cursor().get('beyond', 'main', 'wan_mode') ?? '' };
+		}
+	},
+
+	finish_setup: {
+		args: { password: '', ssid: '', key: '' },
+		call: function(req) {
+			if (setup_done())
+				return { ok: false, error: 'Setup is already done. Sign in instead.' };
+			let a = req.args;
+			if (type(a.password) != 'string' || length(a.password) < 8)
+				return { ok: false, error: 'The router password needs at least 8 characters.' };
+			let bad = check_wifi(a.ssid, a.key);
+			if (bad) return { ok: false, error: bad };
+
+			let p = shellquote(a.password);
+			if (system(`(echo ${p}; sleep 1; echo ${p}) | /bin/busybox passwd root >/dev/null 2>&1`) != 0)
+				return { ok: false, error: 'The router password could not be set.' };
+
+			let c = cursor();
+			c.set('beyond', 'main', 'setup_done', '1');
+			c.commit('beyond');
+			set_wifi(c, a.ssid, a.key);
+			return { ok: true };
+		}
+	},
+
+	status: {
+		call: function() {
+			let u = connect();
+			let wan = u.call('network.interface.wan', 'status', {}) ?? {};
+			let wan6 = u.call('network.interface.wan6', 'status', {}) ?? {};
+			let info = u.call('system', 'info', {}) ?? {};
+			let board = u.call('system', 'board', {}) ?? {};
+			let c = cursor();
+			return {
+				model: board.model,
+				release: board.release?.version,
+				hostname: board.hostname,
+				uptime: info.uptime,
+				memory: info.memory,
+				load: info.load,
+				wan: {
+					up: !!wan.up,
+					mode: c.get('beyond', 'main', 'wan_mode') ?? '',
+					ipv4: wan['ipv4-address']?.[0]?.address,
+					ipv6: length(wan6['ipv6-address'] ?? []) > 0 || length(wan6['ipv6-prefix'] ?? []) > 0,
+					dns: wan['dns-server'] ?? [],
+					uptime: wan.uptime ?? 0,
+					device: wan.l3_device,
+					counters: counters(wan.l3_device)
+				},
+				time: time()
+			};
+		}
+	},
+
+	devices: {
+		call: function() {
+			let list = device_list();
+			remember(list);
+			return { devices: list };
+		}
+	},
+
+	rename: {
+		args: { mac: '', name: '', kind: '' },
+		call: function(req) {
+			let mac = lc(req.args.mac ?? '');
+			if (!match(mac, MAC)) return { ok: false, error: 'Not a device address.' };
+			let name = trim(req.args.name ?? '');
+			if (length(name) > 40) return { ok: false, error: 'Names can be up to 40 characters.' };
+			let c = cursor(), s = section_for(mac);
+			if (!c.get('beyond', s)) { c.set('beyond', s, 'device'); c.set('beyond', s, 'mac', mac); }
+			if (length(name)) c.set('beyond', s, 'name', name); else c.delete('beyond', s, 'name');
+			if (index(KINDS, req.args.kind) >= 0) c.set('beyond', s, 'kind', req.args.kind);
+			c.commit('beyond');
+			return { ok: true };
+		}
+	},
+
+	pause: {
+		args: { mac: '', paused: true },
+		call: function(req) {
+			let mac = lc(req.args.mac ?? '');
+			if (!match(mac, MAC)) return { ok: false, error: 'Not a device address.' };
+			let c = cursor(), s = section_for(mac);
+			if (!c.get('beyond', s)) { c.set('beyond', s, 'device'); c.set('beyond', s, 'mac', mac); }
+			c.set('beyond', s, 'paused', req.args.paused ? '1' : '0');
+			c.commit('beyond');
+			return { ok: system('/usr/libexec/beyond/apply-pause') == 0 };
+		}
+	},
+
+	wifi_get: {
+		call: function() {
+			let c = cursor(), names = home_ifaces(c);
+			if (!length(names)) return { ssid: null };
+			return { ssid: c.get('wireless', names[0], 'ssid'), bands: length(names) };
+		}
+	},
+
+	wifi_set: {
+		args: { ssid: '', key: '' },
+		call: function(req) {
+			let bad = check_wifi(req.args.ssid, req.args.key);
+			if (bad) return { ok: false, error: bad };
+			set_wifi(cursor(), req.args.ssid, req.args.key);
+			return { ok: true };
+		}
+	},
+
+	find_internet: {
+		call: function() {
+			let c = cursor();
+			c.set('beyond', 'main', 'wan_mode', '');
+			c.commit('beyond');
+			system('/usr/libexec/beyond/wan-detect --until-found >/dev/null 2>&1 &');
+			return { ok: true };
+		}
+	},
+
+	reboot: {
+		call: function() {
+			system('(sleep 2; reboot) >/dev/null 2>&1 &');
+			return { ok: true };
+		}
+	}
+};
+
+return { beyond: methods };
