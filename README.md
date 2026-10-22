@@ -200,3 +200,10 @@ Linked to Beyond Family, it also sends your own household, once a minute: whethe
 ## Licence
 
 GPL-3.0 (see `LICENSE`), like Beyond TV. OpenWrt is GPL-2.0 and LuCI Apache-2.0; their source is at openwrt.org and this repo is how our images are made. Sora is under the SIL Open Font Licence (`web/public/LICENSE-Sora-OFL.txt`). "Like UniFi" means the feel only: no Ubiquiti code or names.
+
+## Trade marks
+
+The code is GPL-3.0, so you are free to use, change and share it under that licence. The name is not part of the
+licence. Beyond™, Beyond™ Gateway, Beyond™ TV, Beyond™ Family and Beyond's four coloured dots are trade marks of Global
+Support Limited (BEYOND is registered in New Zealand, IPONZ 1251473). If you share a changed version, give it your own
+name and icon, and don't say it comes from Beyond.
