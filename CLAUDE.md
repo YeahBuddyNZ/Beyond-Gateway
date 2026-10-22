@@ -37,3 +37,16 @@ Beyond's router: OpenWrt underneath, the Beyond app on top. Part of the Beyond t
 - Checks: `sh tests/run.sh`; `cd web && npm run build` (typecheck and build); `./build.sh --stage-only` without network; CI builds the images.
 - The ucode has not been run here (no ucode in the sandbox, and downloads.openwrt.org is blocked from it): the first
   real router is its first run. Say so when reporting.
+
+## Updates and help
+
+- **Updates** (`files/usr/libexec/beyond/update`, `tests/update.test.sh`): nightly cron from `91-beyond-updates`, installs
+  only a `latest.txt` signed with the `GATEWAY_UPDATE_KEY` secret (usign format, `tools/update-key.mjs`), only a newer
+  `build=`, only the router's own file by its signed checksum, after `sysupgrade -T`, keeping settings. Manual by
+  default; `beyond.updates.auto` is the overnight switch. CI's release job publishes every main build as the latest
+  release with fixed file names (`beyond-gateway-<router>-sysupgrade.*`) that gobeyond.nz/gateway links straight to.
+  Never print, commit or ask for the key: Kyle pastes it into GitHub himself.
+- `90-beyond` runs again after every sysupgrade and must skip once setup is done, or an update would put the Wi-Fi
+  back to "Beyond Setup".
+- **Help** is `web/src/help.ts` (`#help/<id>`, `HelpLink` on screens). The README's Help section and gobeyond.nz/gateway
+  carry the same answers: change one, change all three.

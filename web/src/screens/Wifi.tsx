@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/reui/badge"
 import { PasswordInput } from "@/components/password-input"
 import { PageTitle, Shell } from "./Shell"
+import { HelpLink } from "@/components/help-link"
 
 export function Wifi() {
   const [loaded, setLoaded] = useState(false)
@@ -34,6 +35,7 @@ export function Wifi() {
   return (
     <Shell tab="wifi">
       <PageTitle title="Wi-Fi" />
+      <HelpLink id="wifi">What happens when I change it?</HelpLink>
 
       <Card>
         <form

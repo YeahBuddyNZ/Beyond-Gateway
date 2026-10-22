@@ -1,0 +1,111 @@
+#!/bin/sh
+# Beyond Gateway updates. Only a version signed with Beyond's update key is installed, and sysupgrade keeps every
+# setting (Wi-Fi, the router password, device names, paused devices).
+#
+#   update check     ask GitHub for the newest version and write what it found to $STATE
+#   update install   install the version check found (the router restarts, internet off for about 3 minutes)
+#   update nightly   what cron runs: check, then install if "Install updates by themselves" is on
+#
+# The release carries latest.txt (one key=value per line, signed as latest.txt.sig):
+#   build=142
+#   version=1.142
+#   date=23/10/2026
+#   notes=One line saying what changed
+#   <router>=<file> <sha256> <bytes>
+
+BASE="${BEYOND_UPDATE_URL:-https://github.com/YeahBuddyNZ/Beyond-Gateway/releases/latest/download}"
+ETC="${BEYOND_ETC:-/etc/beyond}"
+DIR="${BEYOND_UPDATE_DIR:-/tmp/beyond-update}"
+STATE="$DIR/state"
+KEY="$ETC/update.pub"
+FETCH="${BEYOND_FETCH:-uclient-fetch -q -T 30}"
+
+mkdir -p "$DIR"
+
+build_value() { sed -n "s/^$1=//p" "$ETC/build" 2>/dev/null | head -1; }
+manifest_value() { sed -n "s/^$1=//p" "$DIR/latest.txt" 2>/dev/null | head -1; }
+
+# The state the app reads: key=value lines, written whole so a half-written file is never read.
+say() {
+	{
+		echo "status=$1"
+		echo "checked=$(date +%s)"
+		[ -n "$2" ] && echo "message=$2"
+		if [ "$1" = available ] || [ "$1" = installing ]; then
+			echo "build=$(manifest_value build)"
+			echo "version=$(manifest_value version)"
+			echo "date=$(manifest_value date)"
+			echo "notes=$(manifest_value notes)"
+		fi
+	} >"$STATE.new" && mv "$STATE.new" "$STATE"
+}
+
+check() {
+	PROFILE="$(build_value profile)"
+	BUILD="$(build_value build)"
+	if [ ! -s "$KEY" ] || [ -z "$PROFILE" ]; then
+		say off "This copy of Beyond Gateway was built without updates."
+		return 1
+	fi
+	rm -f "$DIR/latest.txt" "$DIR/latest.txt.sig"
+	if ! $FETCH -O "$DIR/latest.txt" "$BASE/latest.txt" || ! $FETCH -O "$DIR/latest.txt.sig" "$BASE/latest.txt.sig"; then
+		say error "Could not reach the update server. It will try again tonight."
+		return 1
+	fi
+	if ! usign -V -q -p "$KEY" -m "$DIR/latest.txt"; then
+		rm -f "$DIR/latest.txt"
+		say error "The update was not signed by Beyond, so it was not used."
+		return 1
+	fi
+	NEW="$(manifest_value build)"
+	case "$NEW" in '' | *[!0-9]*) say error "The update list could not be read."; return 1 ;; esac
+	if [ -z "$(manifest_value "$PROFILE")" ]; then
+		say current "There is no newer version for this router yet."
+		return 0
+	fi
+	if [ "$NEW" -gt "${BUILD:-0}" ]; then
+		say available
+	else
+		say current
+	fi
+}
+
+install() {
+	# Only what check found and verified.
+	[ -s "$DIR/latest.txt" ] && grep -q '^status=available' "$STATE" 2>/dev/null || { echo "Nothing to install. Run check first." >&2; return 1; }
+	usign -V -q -p "$KEY" -m "$DIR/latest.txt" || { say error "The update was not signed by Beyond, so it was not used."; return 1; }
+	set -- $(manifest_value "$(build_value profile)")
+	FILE="$1" SUM="$2"
+	case "$FILE" in '' | */* | *..*) say error "The update list could not be read."; return 1 ;; esac
+	say installing
+	rm -f "$DIR/firmware.bin"
+	if ! $FETCH -O "$DIR/firmware.bin" "$BASE/$FILE"; then
+		rm -f "$DIR/firmware.bin"
+		say available "The download did not finish. Try again in a minute."
+		return 1
+	fi
+	if [ "$(sha256sum "$DIR/firmware.bin" | cut -d' ' -f1)" != "$SUM" ]; then
+		rm -f "$DIR/firmware.bin"
+		say available "The download did not match what Beyond signed, so it was not installed."
+		return 1
+	fi
+	if ! sysupgrade -T "$DIR/firmware.bin" >/dev/null 2>&1; then
+		rm -f "$DIR/firmware.bin"
+		say error "This router did not accept the new version. Nothing was changed."
+		return 1
+	fi
+	logger -t beyond "Installing Beyond Gateway $(manifest_value version)"
+	# Settings are kept (sysupgrade's default). The router restarts into the new version.
+	sysupgrade "$DIR/firmware.bin"
+}
+
+case "$1" in
+	check) check ;;
+	install) install ;;
+	nightly)
+		check || exit 0
+		[ "$(uci -q get beyond.updates.auto)" = 1 ] && grep -q '^status=available' "$STATE" && install
+		exit 0
+		;;
+	*) sed -n '2,8p' "$0" >&2; exit 1 ;;
+esac

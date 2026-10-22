@@ -1,4 +1,4 @@
-import { HouseIcon, MonitorSmartphoneIcon, SettingsIcon, WifiIcon } from "lucide-react"
+import { CircleHelpIcon, HouseIcon, MonitorSmartphoneIcon, SettingsIcon, WifiIcon } from "lucide-react"
 import { cn } from "cn"
 import { buttonVariants } from "@/components/ui/button"
 import { Wordmark } from "@/components/brand"
@@ -10,7 +10,7 @@ export const TABS = [
   ["settings", "Settings", SettingsIcon],
 ] as const
 
-export type Tab = (typeof TABS)[number][0]
+export type Tab = (typeof TABS)[number][0] | "help"
 
 // Signed in: the side menu on a laptop, a tab bar along the bottom on a phone.
 export function Shell({ tab, children }: { tab: Tab; children: React.ReactNode }) {
@@ -35,11 +35,26 @@ export function Shell({ tab, children }: { tab: Tab; children: React.ReactNode }
             </a>
           ))}
         </nav>
+        <a
+          href="#help"
+          aria-current={tab === "help" ? "page" : undefined}
+          className={cn(
+            buttonVariants({ variant: "ghost", size: "lg" }),
+            "mt-auto justify-start",
+            tab === "help" && "bg-accent text-accent-foreground hover:bg-accent hover:text-accent-foreground"
+          )}
+        >
+          <CircleHelpIcon aria-hidden="true" />
+          Help
+        </a>
       </aside>
 
       <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 pt-4 pb-28 md:px-8 md:py-8">
-        <header className="md:hidden">
+        <header className="flex items-center justify-between md:hidden">
           <Wordmark short className="text-base" />
+          <a href="#help" aria-label="Help" aria-current={tab === "help" ? "page" : undefined} className={buttonVariants({ variant: "ghost", size: "icon-lg" })}>
+            <CircleHelpIcon aria-hidden="true" />
+          </a>
         </header>
         {children}
       </main>

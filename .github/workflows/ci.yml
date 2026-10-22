@@ -44,7 +44,11 @@ jobs:
           path: out/cache/openwrt-imagebuilder-*.tar.*
           key: imagebuilder-${{ matrix.router }}-25.12.1
       - name: Build
-        run: ./build.sh ${{ matrix.router }}
+        # The build number is what routers compare to find a newer version; the key only adds its public half.
+        env:
+          RUN: ${{ github.run_number }}
+          GATEWAY_UPDATE_KEY: ${{ secrets.GATEWAY_UPDATE_KEY }}
+        run: BEYOND_BUILD=$((100 + RUN)) BEYOND_VERSION=1.$((100 + RUN)) ./build.sh ${{ matrix.router }}
       - uses: actions/upload-artifact@v4
         with:
           name: beyond-gateway-${{ matrix.router }}
@@ -53,3 +57,55 @@ jobs:
             out/${{ matrix.router }}/*beyond*factory*
             out/${{ matrix.router }}/sha256sums
           if-no-files-found: error
+
+  # Every build of main becomes the latest release: the files under stable names (so gobeyond.nz/gateway can link
+  # straight to them) and latest.txt, signed, which is what routers read each night. Without the GATEWAY_UPDATE_KEY
+  # secret nothing is released, because routers would refuse an unsigned list anyway.
+  release:
+    needs: firmware
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GATEWAY_UPDATE_KEY: ${{ secrets.GATEWAY_UPDATE_KEY }}
+      RUN: ${{ github.run_number }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Is there an update key?
+        id: key
+        run: |
+          if [ -z "$GATEWAY_UPDATE_KEY" ]; then
+            echo "::notice::No GATEWAY_UPDATE_KEY secret, so no release. See README, Updates."
+            echo "ok=false" >>"$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >>"$GITHUB_OUTPUT"
+          fi
+      - uses: actions/download-artifact@v4
+        if: steps.key.outputs.ok == 'true'
+        with:
+          path: built
+      - name: Name the files and sign the list
+        if: steps.key.outputs.ok == 'true'
+        run: |
+          BUILD=$((100 + RUN))
+          echo "BUILD=$BUILD" >>"$GITHUB_ENV"
+          mkdir release
+          for d in built/beyond-gateway-*; do
+            router=${d#built/beyond-gateway-}
+            for kind in sysupgrade factory; do
+              f=$(find "$d" -type f -name "*$kind*" | head -1)
+              [ -n "$f" ] && cp "$f" "release/beyond-gateway-$router-$kind.${f##*.}"
+            done
+          done
+          node tools/release-list.mjs release "$BUILD" "1.$BUILD" "$(git log -1 --format=%s)"
+          node tools/update-key.mjs sign release/latest.txt
+          (cd release && sha256sum beyond-gateway-* >sha256sums)
+          ls -l release
+      - name: Publish
+        if: steps.key.outputs.ok == 'true'
+        run: gh release create "gateway-$BUILD" release/* --title "Beyond Gateway 1.$BUILD" --notes "$(git log -1 --format=%s)" --latest --target "$GITHUB_SHA"

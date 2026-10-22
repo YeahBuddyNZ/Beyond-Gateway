@@ -20,6 +20,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/reui/badge"
 import { DeviceIcon, KINDS } from "@/components/device-icon"
 import { PageTitle, Shell } from "./Shell"
+import { HelpLink } from "@/components/help-link"
 
 const FILTERS = ["All", "Online", "Paused"] as const
 type Filter = (typeof FILTERS)[number]
@@ -60,6 +61,7 @@ export function Devices() {
   return (
     <Shell tab="devices">
       <PageTitle title="Devices" lead="Everything on your network. The switch pauses a device’s internet; it can still see the router." />
+      <HelpLink id="pause">How pausing works</HelpLink>
 
       <Tabs value={filter} onValueChange={(v) => setFilter(v as Filter)}>
         <TabsList aria-label="Show">

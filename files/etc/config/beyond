@@ -3,3 +3,7 @@ config beyond 'main'
 	option setup_done '0'
 	option wan_mode ''
 
+
+# Updates: check each night; install by themselves only when a grown-up turns this on.
+config updates 'updates'
+	option auto '0'

@@ -17,12 +17,12 @@
 		"description": "The Beyond app, for a signed in session",
 		"read": {
 			"ubus": {
-				"beyond": [ "setup_state", "status", "devices", "wifi_get" ]
+				"beyond": [ "setup_state", "status", "devices", "wifi_get", "update_state" ]
 			}
 		},
 		"write": {
 			"ubus": {
-				"beyond": [ "rename", "pause", "wifi_set", "find_internet", "reboot" ]
+				"beyond": [ "rename", "pause", "wifi_set", "find_internet", "reboot", "update_check", "update_install", "update_auto" ]
 			}
 		}
 	}

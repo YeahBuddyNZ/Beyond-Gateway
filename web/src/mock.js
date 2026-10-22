@@ -6,6 +6,12 @@ const start = now();
 let setupDone = !/preview=setup/.test(location.search);
 let rx = 8e9, tx = 1.2e9;
 let ssid = 'Aroha Whare';
+// ?preview&update shows a new version waiting.
+const update = { status: /update/.test(location.search) ? 'available' : 'current', auto: false, checked: start - 3600 * 5 };
+const updateState = () => ({
+	version: '1.141', build: 141, enabled: true, auto: update.auto, status: update.status, checked: update.checked,
+	available: update.status === 'available' || update.status === 'installing' ? { version: '1.142', date: '23/10/2026', notes: 'Help inside the app, and updates that install themselves overnight.' } : null
+});
 
 const devices = [
 	{ mac: 'a4:83:e7:11:22:01', ip: '10.42.0.101', hostname: 'Aroha-iPhone', name: "Mum's phone", online: true, wifi: true, signal: -48, first_seen: start - 86400 * 40 },
@@ -39,7 +45,11 @@ const handlers = {
 	wifi_get: () => ({ ssid, bands: 2 }),
 	wifi_set: (a) => { ssid = a.ssid; return { ok: true }; },
 	find_internet: () => ({ ok: true }),
-	reboot: () => ({ ok: true })
+	reboot: () => ({ ok: true }),
+	update_state: updateState,
+	update_check: () => { update.checked = now(); return updateState(); },
+	update_install: () => { update.status = 'installing'; return { ok: true }; },
+	update_auto: (a) => { update.auto = !!a.on; return { ok: true }; }
 };
 
 export async function mockCall(object, method, args) {
