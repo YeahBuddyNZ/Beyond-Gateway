@@ -103,3 +103,14 @@ test('the join QR code escapes what would break it', () => {
 	assert.equal(lib.wifiQrText('Aroha Whare', 'kumara-pie-42'), 'WIFI:T:WPA;S:Aroha Whare;P:kumara-pie-42;;');
 	assert.equal(lib.wifiQrText('Bach; upstairs', 'a:b,c"d\\e'), 'WIFI:T:WPA;S:Bach\\; upstairs;P:a\\:b\\,c\\"d\\\\e;;');
 });
+
+test('mesh points say how they are, in plain words', () => {
+	const now = 100000;
+	assert.deepEqual(lib.meshPointWords({ online: true, seen: now - 30, clients: 1 }, now), { tone: 'success', badge: 'On', detail: '1 device on its Wi-Fi' });
+	assert.equal(lib.meshPointWords({ online: true, seen: now, clients: 0 }, now).detail, 'Nothing on its Wi-Fi right now');
+	assert.match(lib.meshPointWords({ online: false, seen: 0, clients: 0 }, now).detail, /hasn’t checked in yet/);
+	assert.match(lib.meshPointWords({ online: false, seen: now - 7200, clients: 0 }, now).detail, /2 hours ago/);
+	assert.equal(lib.connectionWords({ wifi: true, point: 'Upstairs' }), 'Wi-Fi on Upstairs');
+	assert.equal(lib.connectionWords({ wifi: true }), 'Wi-Fi');
+	assert.equal(lib.connectionWords({ wifi: false, point: 'Upstairs' }), 'Cable');
+});

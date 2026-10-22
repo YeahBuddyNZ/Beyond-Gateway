@@ -23,13 +23,31 @@ test('every method the app calls exists on the router and is in the access list'
 test('before sign in, only setup is open', async () => {
 	const acl = JSON.parse(await read('files/usr/share/rpcd/acl.d/beyond.json'));
 	const open = [...acl.unauthenticated.read.ubus.beyond, ...acl.unauthenticated.write.ubus.beyond].sort();
-	assert.deepEqual(open, ['finish_setup', 'setup_state']);
+	assert.deepEqual(open, ['finish_setup', 'join_mesh', 'setup_state']);
 });
 
-test('finish_setup refuses once setup is done', async () => {
+test('finish_setup and join_mesh refuse once setup is done', async () => {
 	const uc = await read('files/usr/share/rpcd/ucode/beyond.uc');
-	const body = uc.slice(uc.indexOf('finish_setup: {'), uc.indexOf('status: {'));
-	assert.match(body, /if \(setup_done\(\)\)\s*return \{ ok: false/);
+	for (const [from, to] of [['finish_setup: {', 'status: {'], ['join_mesh: {', 'mesh_state: {']]) {
+		const body = uc.slice(uc.indexOf(from), uc.indexOf(to));
+		assert.ok(body.length > 50, from);
+		assert.match(body, /if \(setup_done\(\)\)\s*return \{ ok: false/, from);
+	}
+});
+
+// The mesh check-in is the main router's page (/cgi-bin/beyond-mesh) and the point's script, never the app.
+test('the mesh check-in is not open to the app, and the mesh state holds no secret', async () => {
+	const uc = await read('files/usr/share/rpcd/ucode/beyond.uc');
+	const acl = JSON.stringify(JSON.parse(await read('files/usr/share/rpcd/acl.d/beyond.json')));
+	for (const m of ['mesh_sync', 'mesh_report', 'mesh_apply']) {
+		assert.match(uc, new RegExp(`^\\t${m}: \\{$`, 'm'), m);
+		assert.doesNotMatch(acl, new RegExp(m), m);
+	}
+	const state = uc.slice(uc.indexOf('function mesh_points()'), uc.indexOf('function roam('));
+	assert.doesNotMatch(state, /secret/);
+	const cgi = await read('files/www/cgi-bin/beyond-mesh');
+	assert.match(cgi, /ubus call beyond mesh_sync/);
+	assert.match(cgi, /403 Forbidden/);
 });
 
 // Screens must go through api.ts, so the check above sees every call the app makes.

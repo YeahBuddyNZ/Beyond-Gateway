@@ -18,3 +18,8 @@ uclient-fetch
 ca-bundle
 # Beyond Family link: reads Beyond Family's short answers.
 jsonfilter
+# Mesh points: the full wpad for telling phones about the other Beyond routers (802.11k and v), and usteer to nudge
+# each phone to the nearest one.
+-wpad-basic-mbedtls
+wpad-mbedtls
+usteer

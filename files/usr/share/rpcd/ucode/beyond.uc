@@ -4,7 +4,7 @@
 
 'use strict';
 
-import { readfile, popen } from 'fs';
+import { readfile, writefile, popen, readdir, unlink, mkdir } from 'fs';
 import { cursor } from 'uci';
 import { connect } from 'ubus';
 
@@ -33,6 +33,148 @@ function home_ifaces(c) {
 	return out;
 }
 
+// key=value lines, as /etc/beyond/build and the updater's state file are written.
+function keyvalues(path) {
+	let out = {};
+	for (let line in split(readfile(path) ?? '', '\n')) {
+		let m = match(line, /^([a-z_]+)=(.*)$/);
+		if (m) out[m[1]] = m[2];
+	}
+	return out;
+}
+
+// Mesh: one main Beyond router and up to MAX_POINTS more as mesh points. A point is any router running Beyond
+// Gateway, of any make: it hands its own internet and addresses over to the main router, joins its network by cable,
+// and puts out the same Wi-Fi. The main router keeps the list; each point asks it once a minute for the Wi-Fi
+// (files/usr/libexec/beyond/mesh, through /cgi-bin/beyond-mesh) and says which phones are on it.
+const MAX_POINTS = 10;
+const POINT_ID = /^[0-9a-f]{16}$/;
+const POINT_SECRET = /^[A-Za-z0-9_-]{43}$/;
+const MESH_ETC = '/etc/beyond/mesh.d';
+const MESH_TMP = '/tmp/beyond-mesh';
+
+// '' on its own, 'main' with points, 'point' when it is one.
+function mesh_role() {
+	return cursor().get('beyond', 'mesh', 'role') ?? '';
+}
+
+function set_role(c, role) {
+	if (!c.get('beyond', 'mesh')) c.set('beyond', 'mesh', 'mesh');
+	c.set('beyond', 'mesh', 'role', role);
+	c.commit('beyond');
+}
+
+// 32 random bytes, URL-safe base64 without padding: 43 characters.
+function new_secret() {
+	let raw = readfile('/dev/urandom', 32);
+	if (length(raw) != 32) return null;
+	return replace(replace(replace(b64enc(raw), '+', '-'), '/', '_'), '=', '');
+}
+
+// Written by the shell with its umask, so the file is root's only from the first byte.
+function write_private(path, text) {
+	let p = popen(`umask 077; cat > ${shellquote(path)}`, 'w');
+	if (!p) return false;
+	p.write(text);
+	return p.close() == 0;
+}
+
+// What a point last said, kept in /tmp so a minute's check never writes to the flash.
+function point_live(id) {
+	let s = null;
+	try { s = json(readfile(`${MESH_TMP}/points/${id}.json`) ?? 'null'); } catch (e) { s = null; }
+	return type(s) == 'object' ? s : null;
+}
+
+function mesh_points() {
+	let c = cursor(), out = [];
+	c.foreach('beyond', 'mesh_point', (s) => {
+		if (!match(s.id ?? '', POINT_ID)) return;
+		let live = point_live(s.id);
+		push(out, {
+			id: s.id,
+			name: s.name ?? 'Mesh point',
+			model: s.model ?? '',
+			joined: +(s.joined ?? 0),
+			seen: live?.seen ?? 0,
+			online: !!live && time() - live.seen < 150,
+			ip: live?.ip ?? null,
+			clients: length(live?.clients ?? [])
+		});
+	});
+	return out;
+}
+
+// Phones on the points, for the device list: mac -> { signal, point }. Only from points heard from lately.
+function point_clients() {
+	let out = {};
+	for (let p in mesh_points()) {
+		if (!p.online) continue;
+		for (let cl in (point_live(p.id)?.clients ?? []))
+			out[cl.mac] = { signal: cl.signal, point: p.name };
+	}
+	return out;
+}
+
+// The points' own addresses, so a point doesn't show up as a "device" on the main router.
+function point_macs() {
+	let out = {};
+	for (let p in mesh_points()) {
+		let m = point_live(p.id)?.mac;
+		if (m) out[m] = true;
+	}
+	return out;
+}
+
+function clean_clients(list) {
+	let out = [];
+	if (type(list) != 'array') return out;
+	for (let cl in list) {
+		let mac = lc(cl?.mac ?? '');
+		if (match(mac, MAC) && length(out) < 256)
+			push(out, { mac, signal: type(cl.signal) == 'int' ? cl.signal : null });
+	}
+	return out;
+}
+
+function home_wifi(c) {
+	let names = home_ifaces(c);
+	if (!length(names)) return null;
+	let radio = c.get('wireless', names[0], 'device');
+	return {
+		ssid: c.get('wireless', names[0], 'ssid'),
+		key: c.get('wireless', names[0], 'key'),
+		country: (radio ? c.get('wireless', radio, 'country') : null) ?? 'NZ'
+	};
+}
+
+function mesh_state() {
+	let role = mesh_role();
+	if (role == 'point') {
+		let st = keyvalues(`${MESH_TMP}/state`);
+		return {
+			role,
+			name: cursor().get('beyond', 'mesh', 'name') ?? 'Mesh point',
+			main: st.main ?? null,
+			checked: +(st.checked ?? 0),
+			message: trim(readfile(`${MESH_TMP}/message`) ?? '') || null
+		};
+	}
+	return { role, points: mesh_points(), max: MAX_POINTS };
+}
+// With mesh points, each Beyond router tells phones about the others (802.11k) and nudges a phone to the nearer one
+// (802.11v, and usteer on the LAN). Same name and password everywhere, so a phone moves on without asking.
+// Fast hand-over (802.11r) stays off: some older phones and smart plugs drop off with it.
+function roam(c) {
+	let on = mesh_role() != '';
+	for (let name in home_ifaces(c)) {
+		c.set('wireless', name, 'ieee80211k', on ? '1' : '0');
+		c.set('wireless', name, 'bss_transition', on ? '1' : '0');
+	}
+	if (on) system('[ -x /etc/init.d/usteer ] && { /etc/init.d/usteer enable; /etc/init.d/usteer start; } >/dev/null 2>&1');
+}
+
+
 function set_wifi(c, ssid, key) {
 	for (let name in home_ifaces(c)) {
 		c.set('wireless', name, 'ssid', ssid);
@@ -40,6 +182,7 @@ function set_wifi(c, ssid, key) {
 		c.set('wireless', name, 'key', key);
 		c.set('wireless', name, 'disabled', '0');
 	}
+	roam(c);
 	c.commit('wireless');
 	system('wifi reload >/dev/null 2>&1 &');
 }
@@ -98,6 +241,8 @@ function device_list() {
 	let c = cursor();
 	let u = connect();
 	let lease = leases(), neigh = neighbours(), wifi = wifi_clients(u);
+	let away = mesh_role() == 'main' ? point_clients() : {}, hide = mesh_role() == 'main' ? point_macs() : {};
+	for (let m, w in away) if (!wifi[m]) wifi[m] = w;
 	let known = {};
 	c.foreach('beyond', 'device', (s) => { if (s.mac) known[lc(s.mac)] = s; });
 
@@ -109,6 +254,7 @@ function device_list() {
 
 	let out = [];
 	for (let mac in keys(macs)) {
+		if (hide[mac]) continue;
 		let n = neigh[mac], l = lease[mac], w = wifi[mac], k = known[mac];
 		let online = !!w || (n && index(['REACHABLE', 'STALE', 'DELAY', 'PROBE'], n.state) >= 0);
 		push(out, {
@@ -121,6 +267,7 @@ function device_list() {
 			online,
 			wifi: !!w,
 			signal: w?.signal,
+			point: w?.point,
 			first_seen: +(k?.first_seen ?? 0)
 		});
 	}
@@ -141,16 +288,6 @@ function remember(list) {
 		}
 	}
 	if (changed) c.commit('beyond');
-}
-
-// key=value lines, as /etc/beyond/build and the updater's state file are written.
-function keyvalues(path) {
-	let out = {};
-	for (let line in split(readfile(path) ?? '', '\n')) {
-		let m = match(line, /^([a-z_]+)=(.*)$/);
-		if (m) out[m[1]] = m[2];
-	}
-	return out;
 }
 
 function update_state() {
@@ -227,11 +364,19 @@ function family_state() {
 	};
 }
 
+
 const methods = {
 	setup_state: {
 		call: function() {
 			let board = connect().call('system', 'board', {});
-			return { setup_done: setup_done(), model: board?.model, wan_mode: cursor().get('beyond', 'main', 'wan_mode') ?? '' };
+			return {
+				setup_done: setup_done(),
+				model: board?.model,
+				wan_mode: cursor().get('beyond', 'main', 'wan_mode') ?? '',
+				role: mesh_role(),
+				joining: !!readfile(`${MESH_TMP}/joining`),
+				mesh_message: trim(readfile(`${MESH_TMP}/message`) ?? '') || null
+			};
 		}
 	},
 
@@ -420,6 +565,179 @@ const methods = {
 		call: function() {
 			system('/usr/libexec/beyond/family unlink >/dev/null 2>&1');
 			return family_state();
+		}
+	},
+
+	// Before setup: make this router a mesh point of the Beyond router already in the house, using that router's
+	// password (it becomes this one's too). Refuses once set up, like finish_setup. The network changes under the
+	// browser, so the work happens in the background; setup_state says how it went.
+	join_mesh: {
+		args: { password: '' },
+		call: function(req) {
+			if (setup_done())
+				return { ok: false, error: 'This router is already set up. Reset it first to make it a mesh point.' };
+			let pw = req.args.password;
+			if (type(pw) != 'string' || length(pw) < 8 || length(pw) > 128)
+				return { ok: false, error: 'Type the password of your main Beyond router.' };
+			mkdir(MESH_TMP);
+			unlink(`${MESH_TMP}/message`);
+			let login = { jsonrpc: '2.0', id: 1, method: 'call',
+				params: ['00000000000000000000000000000000', 'session', 'login', { username: 'root', password: pw, timeout: 120 }] };
+			if (!write_private(`${MESH_TMP}/login.json`, sprintf('%J', login)) || !write_private(`${MESH_TMP}/password`, pw + '\n'))
+				return { ok: false, error: 'Something went wrong on this router. Try again.' };
+			writefile(`${MESH_TMP}/joining`, '' + time());
+			system('(sleep 2; /usr/libexec/beyond/mesh join) >/dev/null 2>&1 &');
+			return { ok: true };
+		}
+	},
+
+	mesh_state: {
+		call: function() {
+			return mesh_state();
+		}
+	},
+
+	// Called by a new point, signed in to this router with its password (files/usr/libexec/beyond/mesh join).
+	mesh_join: {
+		args: { id: '', model: '' },
+		call: function(req) {
+			let id = req.args.id ?? '';
+			if (!match(id, POINT_ID)) return { ok: false, error: 'Not a mesh point.' };
+			if (mesh_role() == 'point') return { ok: false, error: 'This router is a mesh point itself. Join the main one instead.' };
+			let c = cursor(), s = 'p_' + id;
+			if (!c.get('beyond', s) && length(mesh_points()) >= MAX_POINTS)
+				return { ok: false, error: `Your Beyond network already has ${MAX_POINTS} mesh points.` };
+			let secret = new_secret();
+			if (!secret) return { ok: false, error: 'Something went wrong on the main router. Try again.' };
+			mkdir('/etc/beyond');
+			mkdir(MESH_ETC);
+			if (!write_private(`${MESH_ETC}/${id}`, secret + '\n')) return { ok: false, error: 'Something went wrong on the main router. Try again.' };
+			let model = substr(replace(req.args.model ?? '', /[^A-Za-z0-9 ._()+-]/g, ''), 0, 60);
+			if (!c.get('beyond', s)) {
+				c.set('beyond', s, 'mesh_point');
+				c.set('beyond', s, 'id', id);
+				c.set('beyond', s, 'name', 'Mesh point ' + (length(mesh_points()) + 1));
+				c.set('beyond', s, 'joined', '' + time());
+			}
+			c.set('beyond', s, 'model', model);
+			c.commit('beyond');
+			if (mesh_role() != 'main') {
+				set_role(c, 'main');
+				roam(c);
+				c.commit('wireless');
+				system('wifi reload >/dev/null 2>&1 &');
+			}
+			return { ok: true, secret };
+		}
+	},
+
+	mesh_rename: {
+		args: { id: '', name: '' },
+		call: function(req) {
+			let id = req.args.id ?? '', name = trim(req.args.name ?? '');
+			let c = cursor();
+			if (!match(id, POINT_ID) || !c.get('beyond', 'p_' + id)) return { ok: false, error: 'No such mesh point.' };
+			if (length(name) < 1 || length(name) > 30) return { ok: false, error: 'Names can be 1 to 30 characters.' };
+			c.set('beyond', 'p_' + id, 'name', name);
+			c.commit('beyond');
+			return { ok: true };
+		}
+	},
+
+	// The point stops getting the Wi-Fi from here. It keeps the one it has until somebody resets it.
+	mesh_forget: {
+		args: { id: '' },
+		call: function(req) {
+			let id = req.args.id ?? '';
+			if (!match(id, POINT_ID)) return { ok: false, error: 'No such mesh point.' };
+			let c = cursor();
+			c.delete('beyond', 'p_' + id);
+			c.commit('beyond');
+			unlink(`${MESH_ETC}/${id}`);
+			unlink(`${MESH_TMP}/points/${id}.json`);
+			if (!length(mesh_points())) {
+				set_role(c, '');
+				roam(c);
+				c.commit('wireless');
+				system('wifi reload >/dev/null 2>&1 &');
+			}
+			return { ok: true };
+		}
+	},
+
+	// Internal: what /cgi-bin/beyond-mesh hands over from a point each minute. Not in the access list.
+	mesh_sync: {
+		args: { id: '', secret: '', from: '', mac: '', model: '', uptime: 0, clients: [] },
+		call: function(req) {
+			let a = req.args, id = a.id ?? '';
+			if (mesh_role() != 'main' || !match(id, POINT_ID) || !match(a.secret ?? '', POINT_SECRET))
+				return { ok: false };
+			if (trim(readfile(`${MESH_ETC}/${id}`) ?? '') != a.secret) return { ok: false };
+			let c = cursor();
+			if (!c.get('beyond', 'p_' + id)) return { ok: false };
+			mkdir(MESH_TMP);
+			mkdir(`${MESH_TMP}/points`);
+			let mac = lc(a.mac ?? '');
+			writefile(`${MESH_TMP}/points/${id}.json`, sprintf('%J', {
+				seen: time(),
+				ip: match(a.from ?? '', /^[0-9.]{7,15}$/) ? a.from : null,
+				mac: match(mac, MAC) ? mac : null,
+				uptime: type(a.uptime) == 'int' ? a.uptime : 0,
+				clients: clean_clients(a.clients)
+			}));
+			let wifi = home_wifi(c);
+			if (!wifi) return { ok: false };
+			return { ok: true, name: c.get('beyond', 'p_' + id, 'name') ?? 'Mesh point', wifi };
+		}
+	},
+
+	// Internal, on a point: what it tells the main router (the mesh script adds who it is).
+	mesh_report: {
+		call: function() {
+			let board = connect().call('system', 'board', {}) ?? {}, info = connect().call('system', 'info', {}) ?? {};
+			let clients = [];
+			for (let mac, w in wifi_clients(connect())) push(clients, { mac, signal: w.signal });
+			return {
+				model: board.model ?? '',
+				mac: lc(trim(readfile('/sys/class/net/br-lan/address') ?? '')),
+				uptime: info.uptime ?? 0,
+				clients
+			};
+		}
+	},
+
+	// Internal, on a point: the main router's answer. Changes the Wi-Fi only when it differs, so a minute's check
+	// doesn't restart the radios.
+	mesh_apply: {
+		args: { ok: false, name: '', wifi: {} },
+		call: function(req) {
+			if (mesh_role() != 'point') return { ok: false };
+			let w = req.args.wifi ?? {};
+			if (check_wifi(w.ssid, w.key)) return { ok: false };
+			let c = cursor(), have = home_wifi(c), changed = false;
+			let name = trim(req.args.name ?? '');
+			if (length(name) && length(name) <= 30 && c.get('beyond', 'mesh', 'name') != name) {
+				c.set('beyond', 'mesh', 'name', name);
+				c.commit('beyond');
+			}
+			if (match(w.country ?? '', /^[A-Z]{2}$/) && have?.country != w.country) {
+				c.foreach('wireless', 'wifi-device', (r) => c.set('wireless', r['.name'], 'country', w.country));
+				changed = true;
+			}
+			if (changed || !have || have.ssid != w.ssid || have.key != w.key) {
+				set_wifi(c, w.ssid, w.key);
+				changed = true;
+			}
+			return { ok: true, changed };
+		}
+	},
+
+	// On a point: back to a fresh router, as it was before it joined.
+	mesh_leave: {
+		call: function() {
+			if (mesh_role() != 'point') return { ok: false, error: 'This router isn’t a mesh point.' };
+			system('(sleep 2; /usr/libexec/beyond/mesh leave) >/dev/null 2>&1 &');
+			return { ok: true };
 		}
 	},
 

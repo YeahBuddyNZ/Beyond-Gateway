@@ -72,6 +72,11 @@ export const beyond = {
   familyState: () => call("beyond", "family_state"),
   familyLink: () => call("beyond", "family_link"),
   familyUnlink: () => call("beyond", "family_unlink"),
+  joinMesh: (a: { password: string }) => call("beyond", "join_mesh", a),
+  meshState: () => call("beyond", "mesh_state"),
+  meshRename: (a: { id: string; name: string }) => call("beyond", "mesh_rename", a),
+  meshForget: (a: { id: string }) => call("beyond", "mesh_forget", a),
+  meshLeave: () => call("beyond", "mesh_leave"),
 }
 
 export async function signIn(password: string) {

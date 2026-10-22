@@ -1,0 +1,175 @@
+#!/bin/sh
+# Mesh points: more Beyond routers around the house putting out the same Wi-Fi as the main one, of any make.
+#
+#   mesh join    on a new router, from its Setup screen: become a mesh point of the Beyond router it's plugged into
+#   mesh sync    what cron runs each minute on a point: say which phones are here, take the main router's Wi-Fi
+#   mesh leave   on a point: back to a fresh router (a reset), to set up again
+#
+# A point hands its internet and its addresses over to the main router. Its WAN port joins its other ports, it takes
+# an address from the main router like any device, and it stops handing out its own. Joined by cable.
+
+ETC="${BEYOND_ETC:-/etc/beyond}"
+DIR="${BEYOND_MESH_DIR:-/tmp/beyond-mesh}"
+CONFIG="${BEYOND_CONFIG:-/etc/config}"
+INITD="${BEYOND_INITD:-/etc/init.d}"
+FILE="$ETC/mesh"
+BACKUP="$ETC/mesh-backup"
+FETCH="${BEYOND_FETCH:-uclient-fetch -q -T 15}"
+WAIT="${BEYOND_WAIT:-90}"
+
+mkdir -p "$DIR"
+
+log() { logger -t beyond "mesh: $*" 2>/dev/null; }
+value() { sed -n "s/^$1=//p" "$FILE" 2>/dev/null | head -1; }
+field() { printf '%s' "$1" | jsonfilter -e "@.$2" 2>/dev/null; }
+say() { printf '%s\n' "$1" >"$DIR/message"; log "$1"; }
+
+# post url body: the answer on stdout. Returns 2 when the main router says no (it no longer knows this point).
+post() {
+	if $FETCH -O - --post-data="$2" "$1" 2>"$DIR/error"; then
+		rm -f "$DIR/error"
+		return 0
+	fi
+	grep -q 403 "$DIR/error" && { rm -f "$DIR/error"; return 2; }
+	rm -f "$DIR/error"
+	return 1
+}
+
+ubus_body() { # session object method args
+	printf '{"jsonrpc":"2.0","id":1,"method":"call","params":["%s","%s","%s",%s]}' "$1" "$2" "$3" "$4"
+}
+
+wan_port() {
+	p=$(jsonfilter -i /etc/board.json -e '@.network.wan.device' 2>/dev/null)
+	[ -n "$p" ] && echo "$p" || echo wan
+}
+
+# The main router is wherever this one got its address from.
+main_addr() {
+	gw=$(ubus call network.interface.lan status 2>/dev/null | jsonfilter -e '@.route[@.target="0.0.0.0"].nexthop' 2>/dev/null | head -1)
+	printf '%s' "$gw" | grep -Eqx '[0-9]{1,3}(\.[0-9]{1,3}){3}' && echo "$gw"
+}
+
+# Only a Beyond router that is set up answers this way, so a point never joins an ISP's router by mistake.
+is_beyond() {
+	a=$(post "http://$1/ubus" "$(ubus_body 00000000000000000000000000000000 beyond setup_state '{}')") || return 1
+	[ "$(field "$a" 'result[1].setup_done')" = true ] && [ "$(field "$a" 'result[1].role')" != point ]
+}
+
+to_point() {
+	# Its own name on the main router's list, so beyond.lan still means the main router.
+	uci set system.@system[0].hostname=Beyond-Point
+	uci commit system
+	port=$(wan_port)
+	br=$(uci -q show network | sed -n "s/^network\.\([^.]*\)\.name='br-lan'$/\1/p" | head -1)
+	[ -n "$br" ] && uci add_list network."$br".ports="$port"
+	uci set network.lan.proto=dhcp
+	uci -q delete network.lan.ipaddr
+	uci -q delete network.lan.netmask
+	uci -q delete network.lan.ip6assign
+	for i in wan wan6; do
+		uci set network.$i.proto=none
+		uci set network.$i.auto=0
+		uci -q delete network.$i.device
+	done
+	uci set dhcp.lan.ignore=1
+	uci set dhcp.lan.dhcpv6=disabled
+	uci set dhcp.lan.ra=disabled
+	uci set dhcp.lan.ndp=disabled
+	uci commit network
+	uci commit dhcp
+}
+
+done_joining() { rm -f "$DIR/joining" "$DIR/login.json" "$DIR/password"; }
+
+# Put everything back as it was before "Join", so the Setup screen comes back at the usual address.
+undo() {
+	say "$1"
+	for f in network dhcp; do [ -f "$BACKUP/$f" ] && cp "$BACKUP/$f" "$CONFIG/$f"; done
+	rm -rf "$BACKUP"
+	uci set system.@system[0].hostname=Beyond
+	uci commit system
+	done_joining
+	"$INITD/network" restart >/dev/null 2>&1
+	"$INITD/beyond" start >/dev/null 2>&1
+	return 1
+}
+
+join() {
+	[ "$(uci -q get beyond.main.setup_done)" = 1 ] && { done_joining; say "This router is already set up."; return 1; }
+	[ -s "$DIR/login.json" ] && [ -s "$DIR/password" ] || { done_joining; say "Type the main router's password and try again."; return 1; }
+	rm -f "$DIR/message"
+	mkdir -p "$BACKUP"
+	for f in network dhcp; do cp "$CONFIG/$f" "$BACKUP/$f"; done
+	"$INITD/beyond" stop >/dev/null 2>&1
+	to_point
+	"$INITD/network" restart >/dev/null 2>&1
+
+	gw='' waited=0
+	while [ "$waited" -lt "$WAIT" ]; do
+		gw=$(main_addr) && break
+		sleep 3
+		waited=$((waited + 3))
+	done
+	[ -n "$gw" ] || { undo "Couldn't find your main Beyond router. Plug this router's WAN port into one of its ports, then try again."; return 1; }
+	is_beyond "$gw" || { undo "This router is plugged into one that isn't a Beyond router. Plug it into your main Beyond router, then try again."; return 1; }
+
+	a=$(post "http://$gw/ubus" "$(cat "$DIR/login.json")")
+	sid=$(field "$a" 'result[1].ubus_rpc_session')
+	printf '%s' "$sid" | grep -Eqx '[0-9a-f]{32}' || { undo "That isn't the main router's password. Try again."; return 1; }
+
+	id=$(od -An -tx1 -N8 /dev/urandom | tr -d ' \n')
+	model=$(ubus call system board 2>/dev/null | jsonfilter -e '@.model' 2>/dev/null | tr -cd 'A-Za-z0-9 ._()+-' | cut -c1-60)
+	a=$(post "http://$gw/ubus" "$(ubus_body "$sid" beyond mesh_join "{\"id\":\"$id\",\"model\":\"$model\"}")")
+	secret=$(field "$a" 'result[1].secret')
+	if ! printf '%s' "$secret" | grep -Eqx '[A-Za-z0-9_-]{43}'; then
+		err=$(field "$a" 'result[1].error')
+		undo "${err:-The main router didn't take this one. Try again.}"
+		return 1
+	fi
+
+	(umask 077; printf 'id=%s\nsecret=%s\n' "$id" "$secret" >"$FILE.new") && mv "$FILE.new" "$FILE"
+	# One password for every Beyond router in the house: the main one's.
+	(cat "$DIR/password"; sleep 1; cat "$DIR/password") | passwd root >/dev/null 2>&1
+	uci -q get beyond.mesh >/dev/null || uci set beyond.mesh=mesh
+	uci set beyond.mesh.role=point
+	uci set beyond.main.wan_mode=point
+	uci set beyond.main.setup_done=1
+	uci commit beyond
+	rm -rf "$BACKUP"
+	done_joining
+	log "joined $gw as $id"
+	check_in
+}
+
+check_in() {
+	[ "$(uci -q get beyond.mesh.role)" = point ] && [ -n "$(value id)" ] || return 0
+	gw=$(main_addr) || { say "Can't reach your main Beyond router. Check the cable between them."; return 1; }
+	# ubus prints it indented; JSON keeps any real newline or tab inside a value escaped, so these are only layout.
+	r=$(ubus call beyond mesh_report | tr -d '\n\t')
+	[ -n "$r" ] || return 1
+	a=$(post "http://$gw/cgi-bin/beyond-mesh" "{\"id\":\"$(value id)\",\"secret\":\"$(value secret)\",${r#*\{}")
+	case $? in
+		0) ;;
+		2) say "Your main Beyond router no longer has this one as a mesh point. It keeps the Wi-Fi it has. To use it again, reset it."; return 0 ;;
+		*) say "Can't reach your main Beyond router. Check the cable between them."; return 1 ;;
+	esac
+	[ "$(field "$a" ok)" = true ] || return 1
+	ubus call beyond mesh_apply "$a" >/dev/null 2>&1
+	printf 'main=%s\nchecked=%s\n' "$gw" "$(date +%s)" >"$DIR/state"
+	rm -f "$DIR/message"
+}
+
+# A reset is the cleanest way back: it boots as a fresh Beyond router with the open "Beyond Setup" Wi-Fi.
+leave() {
+	[ "$(uci -q get beyond.mesh.role)" = point ] || return 0
+	log "leaving the mesh: resetting"
+	firstboot -y >/dev/null 2>&1 && reboot
+}
+
+case "$1" in
+	join) join ;;
+	sync) check_in ;;
+	leave) leave ;;
+	*) sed -n '2,9p' "$0" >&2; exit 1 ;;
+esac
