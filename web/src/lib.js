@@ -123,3 +123,17 @@ export function updateWords(u) {
 		default: return { tone: 'muted', badge: 'Not checked', title: 'Not checked yet', detail: 'It checks each night, or check now.' };
 	}
 }
+
+// How each mesh point is doing, from mesh_state. A point checks in each minute, so two and a half minutes of quiet
+// means it's off or its cable is out.
+export function meshPointWords(p, now) {
+	if (p.online) return { tone: 'success', badge: 'On', detail: p.clients ? p.clients + (p.clients === 1 ? ' device' : ' devices') + ' on its Wi-Fi' : 'Nothing on its Wi-Fi right now' };
+	if (!p.seen) return { tone: 'warning', badge: 'Not heard from', detail: 'It hasn’t checked in yet. Check it’s plugged in and turned on.' };
+	return { tone: 'warning', badge: 'Not heard from', detail: 'Last heard from ' + agoWords(p.seen, now) + '. Check its power and the cable to this router.' };
+}
+
+// "Wi-Fi", or "Wi-Fi on Upstairs" for a device on a mesh point.
+export function connectionWords(d) {
+	if (!d.wifi) return 'Cable';
+	return d.point ? 'Wi-Fi on ' + d.point : 'Wi-Fi';
+}

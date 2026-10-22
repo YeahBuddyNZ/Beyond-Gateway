@@ -99,12 +99,25 @@ export const HELP: Topic[] = [
         ],
       },
       {
+        id: "mesh",
+        title: "More Wi-Fi around the house (mesh)",
+        words: "mesh point second router extender upstairs garage sleepout weak signal coverage roaming add another router",
+        body: [
+          "One Beyond router is the **main** one, plugged into the fibre box. Any other router running Beyond Gateway, whatever the make, can join it as a **mesh point**. Every point puts out the same Wi-Fi name and password, so phones move to the nearest one by themselves.",
+          "To add one: put Beyond Gateway on the other router and turn it on without setting it up. Run a cable from its **WAN** port to one of the main router's ports (wall sockets or a powerline adapter are fine). Join its **Beyond Setup** Wi-Fi, open **beyond.lan**, choose **Add to my Beyond network** and type the main router's password.",
+          "About two minutes later it's putting out your Wi-Fi, and it shows under **Settings**, **Mesh points** on the main router. Give it a name like **Upstairs**, and **Devices** then says which router each phone is on.",
+          "Changing the Wi-Fi name or password on the main router changes it on every point within a minute. Pausing a device works wherever it is in the house.",
+          "Points need a cable back to the main router for now. Joining over Wi-Fi alone is coming.",
+          "To take one off: **Settings**, **Mesh points**, **Change**, **Take it off the mesh**. Then reset the point (hold its reset button for 10 seconds) to use it as a router of its own again.",
+        ],
+      },
+      {
         id: "slow",
         title: "The internet is slow",
         words: "slow speed lag buffering",
         body: [
           "**Home** shows how much is being used right now. A big number means something in the house is downloading, often a game console or a computer update.",
-          "Far from the router? Walls and floors slow Wi-Fi down. Try the same thing near the router. If it's quick there, a second Beyond router as a mesh point is coming soon.",
+          "Far from the router? Walls and floors slow Wi-Fi down. Try the same thing near the router. If it's quick there, add a second Beyond router as a mesh point further away (see **More Wi-Fi around the house**).",
         ],
       },
     ],

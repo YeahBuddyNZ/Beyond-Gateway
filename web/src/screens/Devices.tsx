@@ -100,7 +100,7 @@ export function Devices() {
                         {lib.isNew(d, now) && <Badge variant="primary-light">New</Badge>}
                         {d.paused && <Badge variant="warning-light">Paused</Badge>}
                         <span>
-                          {d.paused ? "No internet" : d.online ? (d.wifi ? "Wi-Fi" : "Cable") : "Away"}
+                          {d.paused ? "No internet" : d.online ? lib.connectionWords(d) : "Away"}
                           {d.ip && d.online ? " · " + d.ip : ""}
                         </span>
                       </ItemDescription>

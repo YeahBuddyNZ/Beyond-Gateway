@@ -1,0 +1,10 @@
+#!/bin/sh
+# Every version, first boot: mesh points check in with the main router once a minute. On a router that isn't a mesh
+# point the check does nothing at all.
+
+touch /etc/crontabs/root
+sed -i '/\/usr\/libexec\/beyond\/mesh/d' /etc/crontabs/root
+echo "* * * * * /usr/libexec/beyond/mesh sync" >>/etc/crontabs/root
+/etc/init.d/cron enable
+
+exit 0

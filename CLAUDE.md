@@ -38,6 +38,20 @@ Beyond's router: OpenWrt underneath, the Beyond app on top. Part of the Beyond t
 - The ucode has not been run here (no ucode in the sandbox, and downloads.openwrt.org is blocked from it): the first
   real router is its first run. Say so when reporting.
 
+## Mesh
+
+- One **main** router and up to 10 **points** (`beyond.mesh.role`: '' on its own, `main`, `point`). Any make running
+  Beyond Gateway. A point joins from Setup (`join_mesh`, open before setup like `finish_setup` and refusing after it):
+  `files/usr/libexec/beyond/mesh join` bridges its WAN port into the LAN, takes an address from the main router, checks
+  it really is a set-up Beyond router, signs in to it with the password the person typed (which becomes the point's
+  too) and calls `mesh_join` for its own secret. Anything going wrong puts the network back as it was.
+- Each minute `mesh sync` posts to the main router's `/cgi-bin/beyond-mesh` (LAN only, 403 without the secret), which
+  hands it to `mesh_sync`; the answer (Wi-Fi name, password, country, the point's name) goes to `mesh_apply`, which
+  changes the radios only when something differs. Live point state is in `/tmp/beyond-mesh`, never the flash.
+- `mesh_sync`, `mesh_report` and `mesh_apply` are internal, never in the ACL (`tests/api.test.mjs`). Roaming is
+  802.11k/v plus usteer (full `wpad-mbedtls`); 802.11r stays off because some older devices drop off with it.
+- By cable only for now. Over the air (802.11s) is the next step, where the radios allow.
+
 ## Updates and help
 
 - **Updates** (`files/usr/libexec/beyond/update`, `tests/update.test.sh`): nightly cron from `91-beyond-updates`, installs

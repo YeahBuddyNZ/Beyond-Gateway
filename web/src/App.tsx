@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Centred, Heading } from "@/screens/Centred"
 import { Devices } from "@/screens/Devices"
 import { Home } from "@/screens/Home"
+import { PointHome } from "@/screens/PointHome"
 import { Settings } from "@/screens/Settings"
 import { Setup } from "@/screens/Setup"
 import { SignIn } from "@/screens/SignIn"
@@ -23,10 +24,12 @@ type State = "loading" | "setup" | "signin" | "app" | "unreachable"
 export function App() {
   const [state, setState] = useState<State>("loading")
   const [tab, setTab] = useState(tabFromHash)
+  const [point, setPoint] = useState(false)
 
   const check = useCallback(async () => {
     try {
       const s = await beyond.setupState()
+      setPoint(s.role === "point")
       setState(!s.setup_done ? "setup" : signedIn() ? "app" : "signin")
     } catch (e) {
       if (!(e instanceof SignedOut)) setState("unreachable")
@@ -66,6 +69,8 @@ export function App() {
         </Button>
       </Centred>
     )
+  // A mesh point has nothing of its own to change: the main router looks after it.
+  if (point) return tab === "help" ? <HelpOutside key={location.hash} /> : <PointHome />
   const Screen = SCREENS[tab]
   return <Screen key={tab === "help" ? location.hash : tab} />
 }

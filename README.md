@@ -42,6 +42,7 @@ Free and open source, built in Aotearoa by [Beyond](https://gobeyond.co.nz). The
 - **Pause anything.** Every phone, TV and console in the house, with one switch each. It stays on the Wi-Fi and comes straight back when you un-pause it.
 - **Join with a QR code.** Visitors point their phone's camera at the code on the *Wi-Fi* page and they're on, no password to type. *Print a card for the fridge* puts it on paper.
 - **See it from anywhere in [Beyond Family](https://beyondfamily.app).** *Connect to Beyond Family* in *Settings* shows a code; type it under *Family*, *Home network*, and a grown-up can see from work whether the internet's up at home and who's online, with your Beyond TVs alongside. Look only: nothing there can change the router.
+- **Mesh, with any router.** Add up to ten more Beyond routers around the house, whatever the make. Each one takes the main router's Wi-Fi name and password by itself, phones move to the nearest, and *Devices* says which router each one is on.
 - **Keeps itself up to date.** It checks each night and installs only versions Beyond has signed, keeping every setting. One press, or turn on *Install updates by themselves*.
 - **Help inside the app.** Plain answers on every screen, and the same answers at [gobeyond.nz/gateway](https://gobeyond.nz/gateway).
 - **Private.** Your devices and what they do never leave the house. It asks the internet whether there's a new version, and, only if you link it to Beyond Family, sends your household the names you gave your devices and whether each is online.
@@ -63,7 +64,7 @@ On New Zealand fibre the box on the wall (the ONT) is separate from your provide
 3. **Beyond Family, managing.** Seeing the router from Beyond Family is here (look only). Next: pausing a device from your phone, grown-ups only, with an email on every change.
 4. **Guest Wi-Fi** with a QR code for the TV or the fridge.
 5. **Beyond Shield:** ads and scam sites blocked for the whole house.
-6. **A second router as a mesh point** for big houses.
+6. **Mesh points over Wi-Fi alone.** Mesh points join by cable today; next, joining over the air where there's no cable.
 
 ## Install
 
@@ -147,7 +148,9 @@ The same answers as the app's *Help* (`web/src/help.ts`).
 
 **Pausing a device.** *Devices*, flick its switch. It stays on the Wi-Fi but can't reach the internet until you flick it back.
 
-**The internet is slow.** *Home* shows what's being used right now: a big number means something is downloading. Far from the router? Walls slow Wi-Fi down; a mesh point is coming.
+**The internet is slow.** *Home* shows what's being used right now: a big number means something is downloading. Far from the router? Walls slow Wi-Fi down: add a mesh point further away (below).
+
+**More Wi-Fi around the house (mesh).** Any router running Beyond Gateway, whatever the make, can join your main one as a *mesh point*, and every point puts out the same Wi-Fi so phones move to the nearest by themselves. Put Beyond Gateway on it and turn it on without setting it up. Cable its *WAN* port to one of the main router's ports (wall sockets or powerline are fine), join *Beyond Setup*, open *beyond.lan*, choose *Add to my Beyond network* and type the main router's password. It shows under *Settings*, *Mesh points* a couple of minutes later. Wi-Fi changes on the main router reach every point within a minute. To take one off: *Change*, *Take it off the mesh*, then reset it.
 
 **Still stuck?** [gobeyond.nz/gateway](https://gobeyond.nz/gateway#support): ask Atlas, or send us a message.
 

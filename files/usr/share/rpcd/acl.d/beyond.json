@@ -1,6 +1,6 @@
 {
 	"unauthenticated": {
-		"description": "Before setup: see whether the router is set up, and set it up once (finish_setup refuses after that)",
+		"description": "Before setup: see whether the router is set up, and set it up once, as a new router or as a mesh point (both refuse after that)",
 		"read": {
 			"ubus": {
 				"beyond": [ "setup_state" ]
@@ -8,21 +8,21 @@
 		},
 		"write": {
 			"ubus": {
-				"beyond": [ "finish_setup" ]
+				"beyond": [ "finish_setup", "join_mesh" ]
 			}
 		}
 	},
 
 	"beyond-app": {
-		"description": "The Beyond app, for a signed in session",
+		"description": "The Beyond app, for a signed in session. A new mesh point signs in to the main router like this too, to call mesh_join",
 		"read": {
 			"ubus": {
-				"beyond": [ "setup_state", "status", "devices", "wifi_get", "wifi_share", "update_state", "family_state" ]
+				"beyond": [ "setup_state", "status", "devices", "wifi_get", "wifi_share", "update_state", "family_state", "mesh_state" ]
 			}
 		},
 		"write": {
 			"ubus": {
-				"beyond": [ "rename", "pause", "wifi_set", "find_internet", "reboot", "update_check", "update_install", "update_auto", "family_link", "family_unlink" ]
+				"beyond": [ "rename", "pause", "wifi_set", "find_internet", "reboot", "update_check", "update_install", "update_auto", "family_link", "family_unlink", "mesh_join", "mesh_rename", "mesh_forget", "mesh_leave" ]
 			}
 		}
 	}
