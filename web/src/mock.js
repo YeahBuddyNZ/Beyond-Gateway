@@ -6,6 +6,7 @@ const start = now();
 let setupDone = !/preview=setup/.test(location.search);
 let rx = 8e9, tx = 1.2e9;
 let ssid = 'Aroha Whare';
+let key = 'kumara-pie-42';
 // ?preview&update shows a new version waiting.
 const update = { status: /update/.test(location.search) ? 'available' : 'current', auto: false, checked: start - 3600 * 5 };
 const updateState = () => ({
@@ -43,7 +44,8 @@ const handlers = {
 	rename: (a) => { const d = devices.find((x) => x.mac === a.mac); if (d) { d.name = a.name || undefined; if (a.kind) d.kind = a.kind; } return { ok: true }; },
 	pause: (a) => { const d = devices.find((x) => x.mac === a.mac); if (d) d.paused = !!a.paused; return { ok: true }; },
 	wifi_get: () => ({ ssid, bands: 2 }),
-	wifi_set: (a) => { ssid = a.ssid; return { ok: true }; },
+	wifi_share: () => ({ ssid, key }),
+	wifi_set: (a) => { ssid = a.ssid; key = a.key; return { ok: true }; },
 	find_internet: () => ({ ok: true }),
 	reboot: () => ({ ok: true }),
 	update_state: updateState,

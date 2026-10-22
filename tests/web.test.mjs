@@ -98,3 +98,8 @@ test('how long ago, in words', () => {
 	assert.equal(lib.agoWords(1, 1 + 5 * 3600), '5 hours ago');
 	assert.equal(lib.agoWords(1, 1 + 3 * 86400), '3 days ago');
 });
+
+test('the join QR code escapes what would break it', () => {
+	assert.equal(lib.wifiQrText('Aroha Whare', 'kumara-pie-42'), 'WIFI:T:WPA;S:Aroha Whare;P:kumara-pie-42;;');
+	assert.equal(lib.wifiQrText('Bach; upstairs', 'a:b,c"d\\e'), 'WIFI:T:WPA;S:Bach\\; upstairs;P:a\\:b\\,c\\"d\\\\e;;');
+});

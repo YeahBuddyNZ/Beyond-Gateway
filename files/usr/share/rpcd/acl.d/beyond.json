@@ -17,7 +17,7 @@
 		"description": "The Beyond app, for a signed in session",
 		"read": {
 			"ubus": {
-				"beyond": [ "setup_state", "status", "devices", "wifi_get", "update_state" ]
+				"beyond": [ "setup_state", "status", "devices", "wifi_get", "wifi_share", "update_state" ]
 			}
 		},
 		"write": {

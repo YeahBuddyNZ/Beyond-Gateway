@@ -28,6 +28,8 @@ Free and open source, built in Aotearoa by [Beyond](https://gobeyond.co.nz). The
 <td><img src="docs/screenshots/help-article.jpg" alt="Help inside the app: plain answers, like what to do when the internet isn't working"></td></tr>
 <tr><td><img src="docs/screenshots/wifi.jpg" alt="Wi-Fi: one name for every band, changed in one place"></td>
 <td><img src="docs/screenshots/help-search-phone.jpg" alt="Searching the help on a phone"></td></tr>
+<tr><td><img src="docs/screenshots/wifi-qr.jpg" alt="Join with a QR code: point a phone's camera at it, no password to type"></td>
+<td><img src="docs/screenshots/wifi-card.jpg" alt="A printed Join our Wi-Fi card for the fridge, with the QR code, name and password"></td></tr>
 </table>
 
 ## What you get
@@ -36,6 +38,7 @@ Free and open source, built in Aotearoa by [Beyond](https://gobeyond.co.nz). The
 - **Three minutes to set up, from your phone.** Join *Beyond Setup*, open `beyond.lan`, and use your old Wi-Fi name and password so every device rejoins by itself.
 - **Your home at a glance.** Internet, the router and your devices, live speed, and anything that joined today.
 - **Pause anything.** Every phone, TV and console in the house, with one switch each. It stays on the Wi-Fi and comes straight back when you un-pause it.
+- **Join with a QR code.** Visitors point their phone's camera at the code on the *Wi-Fi* page and they're on, no password to type. *Print a card for the fridge* puts it on paper.
 - **Keeps itself up to date.** It checks each night and installs only versions Beyond has signed, keeping every setting. One press, or turn on *Install updates by themselves*.
 - **Help inside the app.** Plain answers on every screen, and the same answers at [gobeyond.nz/gateway](https://gobeyond.nz/gateway).
 - **Private.** Your devices and what they do never leave the house. The only thing it asks the internet is whether there's a new version.
@@ -135,6 +138,8 @@ The same answers as the app's *Help* (`web/src/help.ts`).
 
 **Changing the Wi-Fi name or password.** *Wi-Fi*, type it, *Save*. Everything drops off for a moment; devices that know the new password rejoin by themselves.
 
+**Joining with a QR code.** *Wi-Fi*, *Show the code*, and point a phone's camera at it. *Print a card for the fridge* prints it with the name and password. Change the password and print a new card: the old one stops working.
+
 **Pausing a device.** *Devices*, flick its switch. It stays on the Wi-Fi but can't reach the internet until you flick it back.
 
 **The internet is slow.** *Home* shows what's being used right now: a big number means something is downloading. Far from the router? Walls slow Wi-Fi down; a mesh point is coming.
@@ -183,7 +188,7 @@ What happens in your house stays on your router: your devices, their names and w
 
 ## Credits
 
-[OpenWrt](https://openwrt.org) and [LuCI](https://github.com/openwrt/luci), [ReUI](https://reui.io) and [shadcn/ui](https://ui.shadcn.com), [Base UI](https://base-ui.com), [Lucide](https://lucide.dev) icons and the [Sora](https://github.com/sora-xor/sora-font) typeface.
+[OpenWrt](https://openwrt.org) and [LuCI](https://github.com/openwrt/luci), [ReUI](https://reui.io) and [shadcn/ui](https://ui.shadcn.com), [Base UI](https://base-ui.com) and [uqr](https://github.com/unjs/uqr) for the QR codes, [Lucide](https://lucide.dev) icons and the [Sora](https://github.com/sora-xor/sora-font) typeface.
 
 ## Licence
 

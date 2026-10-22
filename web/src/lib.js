@@ -95,6 +95,13 @@ export function checkWifi(ssid, key) {
 	return null;
 }
 
+// What a phone's camera reads to join a network. Every phone understands this WIFI: text;
+// a backslash goes before \ ; , : and " so a name like "Bach; upstairs" still joins.
+export function wifiQrText(ssid, key) {
+	const esc = (v) => String(v ?? '').replace(/([\\;,:"])/g, '\\$1');
+	return `WIFI:T:WPA;S:${esc(ssid)};P:${esc(key)};;`;
+}
+
 // How long ago, in words: "just now", "5 minutes ago", "3 hours ago", "2 days ago".
 export function agoWords(then, now) {
 	if (!then) return 'not yet';
