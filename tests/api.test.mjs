@@ -56,3 +56,14 @@ test('the kinds the app offers are the kinds the router accepts', async () => {
 	const offered = [...app.matchAll(/^\s*\["([a-z]+)", "/gm)].map((m) => m[1]);
 	assert.deepEqual(offered.sort(), router.sort());
 });
+
+// The Beyond Family link: the report is the family script's, not the app's, and the card never sees the secret.
+test('the Beyond Family report is not open to the app, and its state holds no secret', async () => {
+	const uc = await read('files/usr/share/rpcd/ucode/beyond.uc');
+	const acl = JSON.stringify(JSON.parse(await read('files/usr/share/rpcd/acl.d/beyond.json')));
+	assert.doesNotMatch(acl, /family_report/);
+	const state = uc.slice(uc.indexOf('function family_state()'), uc.indexOf('const methods = {'));
+	assert.doesNotMatch(state.slice(state.indexOf('return {')), /secret/);
+	const report = uc.slice(uc.indexOf('function family_report()'), uc.indexOf('function family_state()'));
+	assert.doesNotMatch(report, /\b(mac|ip|hostname|signal):/, 'no device address leaves the house');
+});

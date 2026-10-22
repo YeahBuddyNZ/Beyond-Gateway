@@ -69,6 +69,9 @@ export const beyond = {
   updateCheck: () => call("beyond", "update_check"),
   updateInstall: () => call("beyond", "update_install"),
   updateAuto: (a: { on: boolean }) => call("beyond", "update_auto", a),
+  familyState: () => call("beyond", "family_state"),
+  familyLink: () => call("beyond", "family_link"),
+  familyUnlink: () => call("beyond", "family_unlink"),
 }
 
 export async function signIn(password: string) {

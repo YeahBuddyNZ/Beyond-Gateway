@@ -16,3 +16,5 @@ pppoe-discovery
 usign
 uclient-fetch
 ca-bundle
+# Beyond Family link: reads Beyond Family's short answers.
+jsonfilter

@@ -14,6 +14,13 @@ const updateState = () => ({
 	available: update.status === 'available' || update.status === 'installing' ? { version: '1.142', date: '23/10/2026', notes: 'Help inside the app, and updates that install themselves overnight.' } : null
 });
 
+// ?preview&family starts linked. Linking in the preview takes about 10 seconds, as if typed in on a phone.
+const family = { linked: /family/.test(location.search), code: null, until: null, at: 0 };
+const familyState = () => {
+	if (family.code && now() - family.at > 10) { family.linked = true; family.code = null; family.until = null; }
+	return { linked: family.linked, code: family.code, until: family.until, checked: now(), message: null };
+};
+
 const devices = [
 	{ mac: 'a4:83:e7:11:22:01', ip: '10.42.0.101', hostname: 'Aroha-iPhone', name: "Mum's phone", online: true, wifi: true, signal: -48, first_seen: start - 86400 * 40 },
 	{ mac: 'a4:83:e7:11:22:02', ip: '10.42.0.102', hostname: 'Nikau-iPad', name: "Nikau's iPad", online: true, wifi: true, signal: -63, first_seen: start - 86400 * 40 },
@@ -51,7 +58,10 @@ const handlers = {
 	update_state: updateState,
 	update_check: () => { update.checked = now(); return updateState(); },
 	update_install: () => { update.status = 'installing'; return { ok: true }; },
-	update_auto: (a) => { update.auto = !!a.on; return { ok: true }; }
+	update_auto: (a) => { update.auto = !!a.on; return { ok: true }; },
+	family_state: familyState,
+	family_link: () => { family.code = 'KQXRMB'; family.until = now() + 600; family.at = now(); return familyState(); },
+	family_unlink: () => { Object.assign(family, { linked: false, code: null, until: null }); return familyState(); }
 };
 
 export async function mockCall(object, method, args) {

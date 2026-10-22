@@ -8,6 +8,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { Skeleton } from "@/components/ui/skeleton"
 import { PageTitle, Shell } from "./Shell"
 import { Updates } from "./Updates"
+import { FamilyLink } from "./FamilyLink"
 import { HelpLink } from "@/components/help-link"
 
 function Facts({ rows }: { rows: Array<[string, React.ReactNode]> }) {
@@ -42,6 +43,8 @@ export function Settings() {
       <PageTitle title="Settings" />
 
       <Updates />
+
+      <FamilyLink />
 
       <Card>
         <CardHeader>
