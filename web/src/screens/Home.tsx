@@ -56,6 +56,8 @@ export function Home() {
     const s = (await beyond.status().catch(() => null)) as Status | null
     if (!s) return
     const cur = { time: s.time, rx: s.wan.counters.rx, tx: s.wan.counters.tx }
+    // Two readings in the same second say nothing about speed: keep the last one rather than showing 0.
+    if (prev.current && cur.time <= prev.current.time) return setStatus(s)
     setRate(prev.current ? lib.rateBetween(prev.current, cur) : null)
     prev.current = cur
     setStatus(s)
