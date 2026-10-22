@@ -147,3 +147,12 @@
 @media (pointer: coarse) {
   input, textarea, select { font-size: 16px; }
 }
+
+/* Print a card: the card is drawn straight into <body>, and on paper it is the only thing there. */
+.print-only { display: none; }
+@media print {
+  @page { margin: 16mm; }
+  html, body { background: #fff !important; }
+  body > :not(.print-only) { display: none !important; }
+  .print-only { display: flex; min-height: 90vh; color: #000; }
+}

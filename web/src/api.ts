@@ -61,6 +61,7 @@ export const beyond = {
   rename: (a: { mac: string; name: string; kind: string }) => call("beyond", "rename", a),
   pause: (a: { mac: string; paused: boolean }) => call("beyond", "pause", a),
   wifiGet: () => call("beyond", "wifi_get"),
+  wifiShare: () => call("beyond", "wifi_share"),
   wifiSet: (a: { ssid: string; key: string }) => call("beyond", "wifi_set", a),
   findInternet: () => call("beyond", "find_internet"),
   reboot: () => call("beyond", "reboot"),

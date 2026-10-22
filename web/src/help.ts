@@ -89,6 +89,16 @@ export const HELP: Topic[] = [
         ],
       },
       {
+        id: "wifi-qr",
+        title: "Joining with a QR code",
+        words: "qr code join guest visitor share password print card fridge camera scan",
+        body: [
+          "Open **Wi-Fi** and tap **Show the code**. Anyone pointing an iPhone or Android camera at it gets a **Join** button, with no password to type.",
+          "**Print a card for the fridge** prints the code with the name and password on one page. Anyone who can see the card can join, so put it where you'd be happy for visitors to see it.",
+          "Changed the password? The code changes with it. Print a new card and throw the old one out, because it won't work any more.",
+        ],
+      },
+      {
         id: "slow",
         title: "The internet is slow",
         words: "slow speed lag buffering",

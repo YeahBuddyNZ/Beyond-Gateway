@@ -274,6 +274,15 @@ const methods = {
 		}
 	},
 
+	// The name and password for the join QR code and the printed card. Signed in only: it is the house's password.
+	wifi_share: {
+		call: function() {
+			let c = cursor(), names = home_ifaces(c);
+			if (!length(names)) return { ssid: null, key: null };
+			return { ssid: c.get('wireless', names[0], 'ssid'), key: c.get('wireless', names[0], 'key') };
+		}
+	},
+
 	wifi_set: {
 		args: { ssid: '', key: '' },
 		call: function(req) {
