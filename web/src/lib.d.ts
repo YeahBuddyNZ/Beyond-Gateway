@@ -11,3 +11,6 @@ export function signalBars(dbm: number | undefined): number
 export function isNew(d: D, now: number): boolean
 export function sortDevices<T extends D>(list: T[]): T[]
 export function checkWifi(ssid: string, key: string): string | null
+export function agoWords(then: number | undefined, now: number): string
+export type UpdateState = { version?: string; build?: number; enabled?: boolean; auto?: boolean; status?: string; checked?: number; message?: string; available?: { version?: string; date?: string; notes?: string } | null }
+export function updateWords(u: UpdateState | null): { tone: "muted" | "primary" | "warning" | "success"; badge: string; title: string; detail: string }

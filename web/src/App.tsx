@@ -8,11 +8,13 @@ import { Settings } from "@/screens/Settings"
 import { Setup } from "@/screens/Setup"
 import { SignIn } from "@/screens/SignIn"
 import { Wifi } from "@/screens/Wifi"
+import { Help, HelpOutside } from "@/screens/Help"
 import { Skeleton } from "@/components/ui/skeleton"
 
-const SCREENS = { home: Home, devices: Devices, wifi: Wifi, settings: Settings }
+const SCREENS = { home: Home, devices: Devices, wifi: Wifi, settings: Settings, help: Help }
+// #help/<article> opens Help at that article.
 const tabFromHash = () => {
-  const t = location.hash.slice(1)
+  const t = location.hash.slice(1).split("/")[0]
   return (t in SCREENS ? t : "home") as keyof typeof SCREENS
 }
 
@@ -51,6 +53,8 @@ export function App() {
         <Skeleton className="h-24 w-full" />
       </Centred>
     )
+  // Help is there before setup and sign-in too, without the menu.
+  if ((state === "setup" || state === "signin") && tab === "help") return <HelpOutside key={location.hash} />
   if (state === "setup") return <Setup />
   if (state === "signin") return <SignIn />
   if (state === "unreachable")
@@ -63,5 +67,5 @@ export function App() {
       </Centred>
     )
   const Screen = SCREENS[tab]
-  return <Screen key={tab} />
+  return <Screen key={tab === "help" ? location.hash : tab} />
 }

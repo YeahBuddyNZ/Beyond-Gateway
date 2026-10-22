@@ -43,10 +43,19 @@ cp -a "$ROOT/files/." "$STAGE/"
 (cd "$ROOT/web" && { [ -d node_modules ] || npm ci --no-audit --no-fund; } && npm run build:router)
 mkdir -p "$STAGE/www/beyond"
 cp -a "$ROOT/web/dist/." "$STAGE/www/beyond/"
-# The version the app shows, from git when there is one.
-VER="$(git -C "$ROOT" describe --tags --always --dirty 2>/dev/null || echo dev)"
+# The version: BEYOND_BUILD is the build number updates compare (CI sets it); the version is what people see.
+BUILD="${BEYOND_BUILD:-0}"
+VER="${BEYOND_VERSION:-$(git -C "$ROOT" describe --tags --always --dirty 2>/dev/null || echo dev)}"
 mkdir -p "$STAGE/etc/beyond"
 echo "$VER" >"$STAGE/etc/beyond/version"
+printf 'build=%s\nversion=%s\nprofile=%s\n' "$BUILD" "$VER" "$PROFILE" >"$STAGE/etc/beyond/build"
+# Updates are checked against Beyond's public key. Without the key (a build of your own) the router never updates.
+if [ -n "${GATEWAY_UPDATE_KEY:-}" ]; then
+	node "$ROOT/tools/update-key.mjs" public >"$STAGE/etc/beyond/update.pub"
+	echo "Updates on: signed releases install on this router"
+else
+	echo "Updates off: GATEWAY_UPDATE_KEY is not set, so this build will not update itself"
+fi
 echo "Staged files for $PROFILE ($VER) in out/stage"
 [ "$STAGE_ONLY" = 1 ] && exit 0
 

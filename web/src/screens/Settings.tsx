@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { PageTitle, Shell } from "./Shell"
+import { Updates } from "./Updates"
+import { HelpLink } from "@/components/help-link"
 
 function Facts({ rows }: { rows: Array<[string, React.ReactNode]> }) {
   return (
@@ -39,6 +41,8 @@ export function Settings() {
     <Shell tab="settings">
       <PageTitle title="Settings" />
 
+      <Updates />
+
       <Card>
         <CardHeader>
           <CardTitle>Internet</CardTitle>
@@ -68,6 +72,9 @@ export function Settings() {
           >
             Find the internet again
           </Button>
+          <HelpLink id="no-internet" className="ml-auto">
+            Internet not working?
+          </HelpLink>
         </CardFooter>
       </Card>
 
@@ -108,9 +115,14 @@ export function Settings() {
         </CardHeader>
         <CardFooter className="flex-col items-start gap-2 border-t py-3">
           <span className="text-xs text-muted-foreground">For people who know networks: OpenWrt’s own screens are still here.</span>
-          <a href="/cgi-bin/luci/" className={buttonVariants({ variant: "outline", size: "lg" })}>
-            Advanced settings
-          </a>
+          <div className="flex w-full flex-wrap items-center gap-2">
+            <a href="/cgi-bin/luci/" className={buttonVariants({ variant: "outline", size: "lg" })}>
+              Advanced settings
+            </a>
+            <HelpLink id="way-back" className="ml-auto">
+              More about going back
+            </HelpLink>
+          </div>
         </CardFooter>
       </Card>
 

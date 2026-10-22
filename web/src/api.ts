@@ -64,6 +64,10 @@ export const beyond = {
   wifiSet: (a: { ssid: string; key: string }) => call("beyond", "wifi_set", a),
   findInternet: () => call("beyond", "find_internet"),
   reboot: () => call("beyond", "reboot"),
+  updateState: () => call("beyond", "update_state"),
+  updateCheck: () => call("beyond", "update_check"),
+  updateInstall: () => call("beyond", "update_install"),
+  updateAuto: (a: { on: boolean }) => call("beyond", "update_auto", a),
 }
 
 export async function signIn(password: string) {

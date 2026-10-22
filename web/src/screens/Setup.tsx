@@ -10,6 +10,7 @@ import { PasswordInput } from "@/components/password-input"
 import { Alert, AlertDescription, AlertTitle } from "@/components/reui/alert"
 import { Stepper, StepperIndicator, StepperItem, StepperNav, StepperSeparator, StepperTitle } from "@/components/reui/stepper"
 import { Centred, Heading } from "./Centred"
+import { HelpLink } from "@/components/help-link"
 
 const STEPS = ["Internet", "Wi-Fi", "Router password"]
 
@@ -100,6 +101,10 @@ export function Setup() {
           <Button size="lg" onClick={() => go(2)}>
             Start
           </Button>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            <HelpLink id="which-isp">Does it work with my internet?</HelpLink>
+            <HelpLink id="phone">Home phone through the modem?</HelpLink>
+          </div>
         </div>
       )}
 
@@ -118,6 +123,7 @@ export function Setup() {
             title="Name your Wi-Fi"
             lead="Tip: use the same name and password as your old router, and every phone and TV in the house joins by itself."
           />
+          <HelpLink id="old-wifi">Where do I find my old one?</HelpLink>
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="ssid">Wi-Fi name</FieldLabel>

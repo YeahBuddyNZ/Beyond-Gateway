@@ -81,3 +81,20 @@ test('router and browser agree on the Wi-Fi limits', async () => {
 	assert.match(uc, /length\(ssid\) > 32/);
 	assert.match(uc, /length\(key\) < 8 \|\| length\(key\) > 63/);
 });
+
+test('update words say what is happening, and a build without the key says updates are off', () => {
+	assert.equal(lib.updateWords({ enabled: false, status: 'available' }).badge, 'Off');
+	assert.equal(lib.updateWords({ enabled: true, status: 'available', available: { version: '1.142', notes: 'Faster' } }).title, 'Beyond Gateway 1.142');
+	assert.equal(lib.updateWords({ enabled: true, status: 'current' }).badge, 'Up to date');
+	assert.equal(lib.updateWords({ enabled: true, status: 'error', message: 'No internet' }).detail, 'No internet');
+	assert.equal(lib.updateWords({ enabled: true, status: 'unknown' }).badge, 'Not checked');
+});
+
+test('how long ago, in words', () => {
+	assert.equal(lib.agoWords(0, 100), 'not yet');
+	assert.equal(lib.agoWords(1000, 1030), 'just now');
+	assert.equal(lib.agoWords(0 + 1, 1 + 600), '10 minutes ago');
+	assert.equal(lib.agoWords(1, 1 + 3600), 'an hour ago');
+	assert.equal(lib.agoWords(1, 1 + 5 * 3600), '5 hours ago');
+	assert.equal(lib.agoWords(1, 1 + 3 * 86400), '3 days ago');
+});

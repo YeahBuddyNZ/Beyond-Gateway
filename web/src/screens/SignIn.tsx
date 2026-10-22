@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { PasswordInput } from "@/components/password-input"
 import { Centred, Heading } from "./Centred"
+import { HelpLink } from "@/components/help-link"
 
 export function SignIn() {
   const [password, setPassword] = useState("")
@@ -32,6 +33,9 @@ export function SignIn() {
         <Button type="submit" size="lg" disabled={busy}>
           Sign in
         </Button>
+        <HelpLink id="forgot-password" className="self-center">
+          Forgot the password?
+        </HelpLink>
       </form>
     </Centred>
   )

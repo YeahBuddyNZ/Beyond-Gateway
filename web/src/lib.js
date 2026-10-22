@@ -94,3 +94,25 @@ export function checkWifi(ssid, key) {
 	if (!key || key.length < 8 || key.length > 63) return 'The Wi-Fi password needs 8 to 63 characters.';
 	return null;
 }
+
+// How long ago, in words: "just now", "5 minutes ago", "3 hours ago", "2 days ago".
+export function agoWords(then, now) {
+	if (!then) return 'not yet';
+	const s = Math.max(0, now - then);
+	if (s < 90) return 'just now';
+	if (s < 3600) return Math.round(s / 60) + ' minutes ago';
+	if (s < 86400 * 1.5) { const h = Math.round(s / 3600); return h === 1 ? 'an hour ago' : h + ' hours ago'; }
+	return Math.round(s / 86400) + ' days ago';
+}
+
+// What the Updates card says, from the router's update_state.
+export function updateWords(u) {
+	if (!u || !u.enabled) return { tone: 'muted', badge: 'Off', title: 'Updates are off on this copy', detail: 'It was built without Beyond’s update key, so it never changes by itself.' };
+	switch (u.status) {
+		case 'available': return { tone: 'primary', badge: 'Update ready', title: 'Beyond Gateway ' + (u.available?.version ?? 'new'), detail: u.available?.notes || 'A new version is ready.' };
+		case 'installing': return { tone: 'warning', badge: 'Installing', title: 'Installing ' + (u.available?.version ?? 'the update'), detail: 'The internet is off for about three minutes, then the router is back on its own.' };
+		case 'error': return { tone: 'warning', badge: 'Try again', title: 'Couldn’t check for updates', detail: u.message || 'It will try again tonight.' };
+		case 'current': return { tone: 'success', badge: 'Up to date', title: 'You have the newest version', detail: 'It checks again tonight.' };
+		default: return { tone: 'muted', badge: 'Not checked', title: 'Not checked yet', detail: 'It checks each night, or check now.' };
+	}
+}

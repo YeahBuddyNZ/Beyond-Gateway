@@ -1,0 +1,14 @@
+#!/bin/sh
+# Every version, first boot: check for updates once a night, at a time of its own between 2 and 5 am so every
+# router in the country doesn't ask at once. Runs after updates too, so the line is always there and never twice.
+
+uci -q get beyond.updates >/dev/null || { uci set beyond.updates=updates; uci set beyond.updates.auto='0'; uci commit beyond; }
+
+set -- $(awk 'BEGIN { srand(); print int(rand() * 60), 2 + int(rand() * 3) }')
+minute=$1 hour=$2
+touch /etc/crontabs/root
+sed -i '/\/usr\/libexec\/beyond\/update/d' /etc/crontabs/root
+echo "$minute $hour * * * /usr/libexec/beyond/update nightly" >>/etc/crontabs/root
+/etc/init.d/cron enable
+
+exit 0

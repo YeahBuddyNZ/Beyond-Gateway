@@ -12,3 +12,7 @@ luci
 # For the ISPs that still use PPPoE.
 ppp-mod-pppoe
 pppoe-discovery
+# Updates: usign checks Beyond's signature, uclient-fetch downloads over https.
+usign
+uclient-fetch
+ca-bundle

@@ -143,6 +143,31 @@ function remember(list) {
 	if (changed) c.commit('beyond');
 }
 
+// key=value lines, as /etc/beyond/build and the updater's state file are written.
+function keyvalues(path) {
+	let out = {};
+	for (let line in split(readfile(path) ?? '', '\n')) {
+		let m = match(line, /^([a-z_]+)=(.*)$/);
+		if (m) out[m[1]] = m[2];
+	}
+	return out;
+}
+
+function update_state() {
+	let build = keyvalues('/etc/beyond/build');
+	let st = keyvalues('/tmp/beyond-update/state');
+	return {
+		version: trim(readfile('/etc/beyond/version') ?? '') || build.version,
+		build: +(build.build ?? 0),
+		enabled: !!readfile('/etc/beyond/update.pub'),
+		auto: cursor().get('beyond', 'updates', 'auto') == '1',
+		status: st.status ?? 'unknown',
+		checked: +(st.checked ?? 0),
+		message: st.message,
+		available: st.status == 'available' || st.status == 'installing' ? { version: st.version, date: st.date, notes: st.notes } : null
+	};
+}
+
 const methods = {
 	setup_state: {
 		call: function() {
@@ -265,6 +290,40 @@ const methods = {
 			c.set('beyond', 'main', 'wan_mode', '');
 			c.commit('beyond');
 			system('/usr/libexec/beyond/wan-detect --until-found >/dev/null 2>&1 &');
+			return { ok: true };
+		}
+	},
+
+	update_state: {
+		call: function() {
+			return update_state();
+		}
+	},
+
+	update_check: {
+		call: function() {
+			system('/usr/libexec/beyond/update check >/dev/null 2>&1');
+			return update_state();
+		}
+	},
+
+	update_install: {
+		call: function() {
+			if (update_state().status != 'available')
+				return { ok: false, error: 'There is no update to install. Check again first.' };
+			// In the background: the router restarts into the new version, so the answer has to go first.
+			system('(sleep 1; /usr/libexec/beyond/update install) >/dev/null 2>&1 &');
+			return { ok: true };
+		}
+	},
+
+	update_auto: {
+		args: { on: false },
+		call: function(req) {
+			let c = cursor();
+			if (!c.get('beyond', 'updates')) c.set('beyond', 'updates', 'updates');
+			c.set('beyond', 'updates', 'auto', req.args.on ? '1' : '0');
+			c.commit('beyond');
 			return { ok: true };
 		}
 	},

@@ -1,5 +1,8 @@
 #!/bin/sh
 # First boot: make OpenWrt into Beyond Gateway. Runs once; OpenWrt deletes this file when it exits 0.
+# It also runs after every update, because each new version is a new image. Settings are kept then, so once the
+# router is set up it leaves everything alone: it must never put the Wi-Fi back to "Beyond Setup".
+[ "$(uci -q get beyond.main.setup_done)" = 1 ] && exit 0
 
 # A LAN range ISP routers don't use, so Beyond can also sit behind one (copper, 4G, 5G) without a clash.
 uci set network.lan.ipaddr='10.42.0.1'
