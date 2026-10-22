@@ -1,0 +1,14 @@
+# Added to OpenWrt's own default packages for each router. One per line; a leading "-" removes one.
+# The Beyond app talks to rpcd through uhttpd's /ubus, and our ubus object is a ucode script.
+uhttpd
+uhttpd-mod-ubus
+rpcd
+rpcd-mod-ucode
+ucode-mod-fs
+ucode-mod-uci
+ucode-mod-ubus
+# OpenWrt's own screens stay, as "Advanced settings" for people who know networks.
+luci
+# For the ISPs that still use PPPoE.
+ppp-mod-pppoe
+pppoe-discovery

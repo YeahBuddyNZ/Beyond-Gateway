@@ -1,0 +1,31 @@
+#!/bin/sh
+# First boot: make OpenWrt into Beyond Gateway. Runs once; OpenWrt deletes this file when it exits 0.
+
+# A LAN range ISP routers don't use, so Beyond can also sit behind one (copper, 4G, 5G) without a clash.
+uci set network.lan.ipaddr='10.42.0.1'
+uci set network.lan.netmask='255.255.255.0'
+uci commit network
+
+uci set system.@system[0].hostname='Beyond'
+uci set system.@system[0].zonename='Pacific/Auckland'
+uci set system.@system[0].timezone='NZST-12NZDT,M9.5.0,M4.1.0/3'
+uci commit system
+
+# The Beyond app talks to the router through ubus over HTTP.
+uci set uhttpd.main.ubus_prefix='/ubus'
+uci commit uhttpd
+
+# Wi-Fi on, New Zealand rules, one open "Beyond Setup" network until setup gives it a real name and password.
+for radio in $(uci -q show wireless | sed -n 's/^wireless\.\([^.=]*\)=wifi-device$/\1/p'); do
+	uci set wireless."$radio".disabled='0'
+	uci set wireless."$radio".country='NZ'
+done
+for iface in $(uci -q show wireless | sed -n 's/^wireless\.\([^.=]*\)=wifi-iface$/\1/p'); do
+	uci set wireless."$iface".ssid='Beyond Setup'
+	uci set wireless."$iface".encryption='none'
+	uci -q delete wireless."$iface".key
+	uci set wireless."$iface".disabled='0'
+done
+uci commit wireless
+
+exit 0

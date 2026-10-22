@@ -1,0 +1,29 @@
+{
+	"unauthenticated": {
+		"description": "Before setup: see whether the router is set up, and set it up once (finish_setup refuses after that)",
+		"read": {
+			"ubus": {
+				"beyond": [ "setup_state" ]
+			}
+		},
+		"write": {
+			"ubus": {
+				"beyond": [ "finish_setup" ]
+			}
+		}
+	},
+
+	"beyond-app": {
+		"description": "The Beyond app, for a signed in session",
+		"read": {
+			"ubus": {
+				"beyond": [ "setup_state", "status", "devices", "wifi_get" ]
+			}
+		},
+		"write": {
+			"ubus": {
+				"beyond": [ "rename", "pause", "wifi_set", "find_internet", "reboot" ]
+			}
+		}
+	}
+}

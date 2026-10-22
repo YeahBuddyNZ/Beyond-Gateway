@@ -1,0 +1,101 @@
+#!/bin/sh
+# Finds how the ISP hands out the internet, so nobody has to type a VLAN.
+#
+# New Zealand fibre is DHCP on VLAN 10 at nearly every ISP (One NZ, Spark, 2degrees and most smaller ones). Behind
+# another router (copper, 4G or 5G broadband) it is plain DHCP. A few ISPs still use PPPoE, tagged or not. We try each
+# without changing anything, and only write the network settings once one of them answers.
+#
+# wan-detect            try once; exit 0 when found, 1 when not
+# wan-detect --until-found   keep trying every 30 seconds (the ONT may not be plugged in yet)
+# wan-detect --dry-run  say what was found, change nothing
+
+DRY=0
+LOOP=0
+for a in "$@"; do
+	case "$a" in
+		--dry-run) DRY=1 ;;
+		--until-found) LOOP=1 ;;
+	esac
+done
+
+log() { logger -t beyond "$*" 2>/dev/null; echo "$*"; }
+
+wan_port() {
+	p=$(jsonfilter -i /etc/board.json -e '@.network.wan.device' 2>/dev/null)
+	[ -n "$p" ] && echo "$p" || echo wan
+}
+
+# Already online: netifd's own DHCP on the untagged port got an address (behind another router).
+online_now() {
+	addr=$(ubus call network.interface.wan status 2>/dev/null | jsonfilter -e '@["ipv4-address"][0].address' 2>/dev/null)
+	[ -n "$addr" ]
+}
+
+# A DHCP offer on a port, without taking the lease (-s /bin/true runs no script, -q quits once offered).
+dhcp_answers() {
+	udhcpc -i "$1" -n -q -f -t 3 -T 2 -s /bin/true >/dev/null 2>&1
+}
+
+pppoe_answers() {
+	pppoe-discovery -I "$1" -t 3 >/dev/null 2>&1
+}
+
+# A throwaway VLAN 10 device, removed again after the test.
+vlan_up() {
+	ip link set "$1" up 2>/dev/null
+	ip link add link "$1" name "$1.10" type vlan id 10 2>/dev/null
+	ip link set "$1.10" up 2>/dev/null
+}
+vlan_down() { ip link del "$1.10" 2>/dev/null; }
+
+detect() {
+	port=$(wan_port)
+	if online_now; then echo dhcp; return 0; fi
+	vlan_up "$port"
+	if dhcp_answers "$port.10"; then vlan_down "$port"; echo vlan10-dhcp; return 0; fi
+	if dhcp_answers "$port"; then vlan_down "$port"; echo dhcp; return 0; fi
+	if pppoe_answers "$port.10"; then vlan_down "$port"; echo vlan10-pppoe; return 0; fi
+	vlan_down "$port"
+	if pppoe_answers "$port"; then echo pppoe; return 0; fi
+	return 1
+}
+
+apply() {
+	mode=$1
+	port=$(wan_port)
+	case "$mode" in
+		vlan10-*) dev="$port.10" ;;
+		*) dev="$port" ;;
+	esac
+	case "$mode" in
+		*-pppoe|pppoe)
+			# NZ ISPs that still use PPPoE accept any login; the person can put theirs in later.
+			uci set network.wan.proto=pppoe
+			uci -q get network.wan.username >/dev/null || uci set network.wan.username=beyond
+			uci -q get network.wan.password >/dev/null || uci set network.wan.password=beyond
+			uci set network.wan6.device="@wan"
+			;;
+		*)
+			uci set network.wan.proto=dhcp
+			uci set network.wan6.device="$dev"
+			;;
+	esac
+	uci set network.wan.device="$dev"
+	uci commit network
+	uci set beyond.main.wan_mode="$mode"
+	uci set beyond.main.wan_found_at="$(date +%s)"
+	uci commit beyond
+	ifup wan 2>/dev/null
+	ifup wan6 2>/dev/null
+}
+
+while :; do
+	if mode=$(detect); then
+		log "Found the internet: $mode"
+		[ "$DRY" = 1 ] || apply "$mode"
+		exit 0
+	fi
+	log "No internet on the WAN port yet"
+	[ "$LOOP" = 1 ] || exit 1
+	sleep "${BEYOND_RETRY:-30}"
+done

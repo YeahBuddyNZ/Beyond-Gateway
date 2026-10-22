@@ -1,0 +1,5 @@
+# Beyond Gateway's own settings. Devices are kept as "device" sections named after their MAC address.
+config beyond 'main'
+	option setup_done '0'
+	option wan_mode ''
+
