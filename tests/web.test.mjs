@@ -1,7 +1,7 @@
 // node --test tests/
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import * as lib from '../web/lib.js';
+import * as lib from '../web/src/lib.js';
 
 test('the ways in read as plain words', () => {
 	assert.equal(lib.wanWords('vlan10-dhcp'), 'Fibre (VLAN 10)');

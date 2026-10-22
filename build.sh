@@ -5,7 +5,7 @@
 #   ./build.sh openwrt_one         another supported router (see ROUTERS below)
 #   ./build.sh --stage-only        just put the files together in out/stage (no download, no build)
 #
-# Needs Linux (x86_64), make, tar with zstd, curl and about 2 GB free. The images land in out/<router>/.
+# Needs Linux (x86_64), make, tar with zstd, curl, Node.js 20+ and about 2 GB free. The images land in out/<router>/.
 set -euo pipefail
 
 OPENWRT_VERSION="${OPENWRT_VERSION:-25.12.1}"
@@ -39,9 +39,10 @@ STAGE="$ROOT/out/stage"
 rm -rf "$STAGE"
 mkdir -p "$STAGE"
 cp -a "$ROOT/files/." "$STAGE/"
+# The app is React with ReUI, built by Vite in "router" mode, which leaves the preview stand-in out.
+(cd "$ROOT/web" && { [ -d node_modules ] || npm ci --no-audit --no-fund; } && npm run build:router)
 mkdir -p "$STAGE/www/beyond"
-cp -a "$ROOT/web/." "$STAGE/www/beyond/"
-rm -f "$STAGE/www/beyond/mock.js"
+cp -a "$ROOT/web/dist/." "$STAGE/www/beyond/"
 # The version the app shows, from git when there is one.
 VER="$(git -C "$ROOT" describe --tags --always --dirty 2>/dev/null || echo dev)"
 mkdir -p "$STAGE/etc/beyond"

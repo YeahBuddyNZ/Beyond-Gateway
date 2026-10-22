@@ -43,23 +43,23 @@ If anything goes wrong, GL.iNet routers have a recovery page that can't be overw
 ./build.sh openwrt_one      # or another router from the table
 ```
 
-Linux x86_64 with make, curl and zstd. It downloads OpenWrt's Image Builder (checked against OpenWrt's checksums), adds the packages in `packages.txt` and everything in `files/` and `web/`, and leaves the images in `out/<router>/`. CI builds all three on every push.
+Linux x86_64 with make, curl, zstd and Node.js 20 or newer. It builds the app, downloads OpenWrt's Image Builder (checked against OpenWrt's checksums), adds the packages in `packages.txt` and everything in `files/` and the built app, and leaves the images in `out/<router>/`. CI builds all three on every push.
 
 ## Trying the app without a router
 
 ```bash
-python3 -m http.server -d web 8765
-# then open http://localhost:8765/?preview   (or ?preview=setup for first-run setup)
+cd web && npm install && npm run dev
+# then open http://localhost:5173/?preview   (or ?preview=setup for first-run setup)
 ```
 
-The preview runs against a made-up house (`web/mock.js`), which is never put on a router.
+The preview runs against a made-up house (`web/src/mock.js`). The router's build (`npm run build:router`) leaves it out altogether.
 
 ## How it fits together
 
 - `files/` goes onto the router as it is: first-boot settings (`etc/uci-defaults/90-beyond`), the internet finder (`usr/libexec/beyond/wan-detect`), pausing devices (`usr/libexec/beyond/apply-pause`) and the `beyond` ubus object the app talks to (`usr/share/rpcd/ucode/beyond.uc`, with who may call what in `usr/share/rpcd/acl.d/beyond.json`).
-- `web/` is the app, plain modern JavaScript with no build step, served by the router at `/beyond/`.
+- `web/` is the app: React, Vite and Tailwind, with its parts from ReUI (shadcn's `base-nova` style on Base UI), built into the image and served by the router at `/beyond/`.
 - `tests/` runs with `sh tests/run.sh`.
 
 ## Licence
 
-GPL-3.0 (see `LICENSE`), like Beyond TV. OpenWrt is GPL-2.0 and LuCI Apache-2.0; their source is at openwrt.org and this repo is how our images are made. Sora is under the SIL Open Font Licence (`web/fonts/`). "Like UniFi" means the feel only: no Ubiquiti code or names.
+GPL-3.0 (see `LICENSE`), like Beyond TV. OpenWrt is GPL-2.0 and LuCI Apache-2.0; their source is at openwrt.org and this repo is how our images are made. Sora is under the SIL Open Font Licence (`web/public/LICENSE-Sora-OFL.txt`). "Like UniFi" means the feel only: no Ubiquiti code or names.
