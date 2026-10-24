@@ -43,6 +43,7 @@ Free and open source, built in Aotearoa by [Beyond](https://gobeyond.co.nz). The
 - **Join with a QR code.** Visitors point their phone's camera at the code on the *Wi-Fi* page and they're on, no password to type. *Print a card for the fridge* puts it on paper.
 - **See it from anywhere in [Beyond Family](https://beyondfamily.app).** *Connect to Beyond Family* in *Settings* shows a code; type it under *Family*, *Home network*, and a grown-up can see from work whether the internet's up at home and who's online, with your Beyond TVs alongside. Look only: nothing there can change the router.
 - **Mesh, with any router.** Add up to ten more Beyond routers around the house, whatever the make. Each one takes the main router's Wi-Fi name and password by itself, phones move to the nearest, and *Devices* says which router each one is on.
+- **Block Big Tech trackers.** One switch in *Settings* stops the ads, tracking and telemetry of the companies on Beyond's [tech fines tracker](https://gobeyond.nz/tech-fines) (Google, Apple, Meta, Amazon, Microsoft, TikTok and X) for the whole house, without breaking their apps, sign-ins or updates. Off until you turn it on. What's blocked and why: [docs/big-tech-trackers.md](docs/big-tech-trackers.md).
 - **Keeps itself up to date.** It checks each night and installs only versions Beyond has signed, keeping every setting. One press, or turn on *Install updates by themselves*.
 - **Help inside the app.** Plain answers on every screen, and the same answers at [gobeyond.nz/gateway](https://gobeyond.nz/gateway).
 - **Private.** Your devices and what they do never leave the house. It asks the internet whether there's a new version, and, only if you link it to Beyond Family, sends your household the names you gave your devices and whether each is online.
@@ -148,6 +149,8 @@ The same answers as the app's *Help* (`web/src/help.ts`).
 
 **Pausing a device.** *Devices*, flick its switch. It stays on the Wi-Fi but can't reach the internet until you flick it back.
 
+**Blocking Big Tech trackers.** *Settings*, **Block Big Tech trackers**. It stops the ads, tracking and telemetry of Google, Apple, Meta, Amazon, Microsoft, TikTok and X for every device in the house, and is off until you turn it on. Only their tracking is blocked: YouTube, Facebook, Instagram, sign-ins, the App Store, Google Play, maps, notifications and updates all keep working. Free TV apps' ad breaks still play, because a few apps stop altogether without them. A site's "Log in with Facebook" button may not show while it's on. Some phones and browsers look up addresses their own private way and skip the router, so the block doesn't reach them.
+
 **The internet is slow.** *Home* shows what's being used right now: a big number means something is downloading. Far from the router? Walls slow Wi-Fi down: add a mesh point further away (below).
 
 **More Wi-Fi around the house (mesh).** Any router running Beyond Gateway, whatever the make, can join your main one as a *mesh point*, and every point puts out the same Wi-Fi so phones move to the nearest by themselves. Put Beyond Gateway on it and turn it on without setting it up. Cable its *WAN* port to one of the main router's ports (wall sockets or powerline are fine), join *Beyond Setup*, open *beyond.lan*, choose *Add to my Beyond network* and type the main router's password. It shows under *Settings*, *Mesh points* a couple of minutes later. Wi-Fi changes on the main router reach every point within a minute. To take one off: *Change*, *Take it off the mesh*, then reset it.
@@ -187,6 +190,7 @@ Linux x86_64 with make, curl, zstd and Node.js 20 or newer. It builds the app, d
 ### How it fits together
 
 - `files/` goes onto the router as it is: first-boot settings (`etc/uci-defaults/`), the internet finder (`usr/libexec/beyond/wan-detect`), pausing (`usr/libexec/beyond/apply-pause`), updates (`usr/libexec/beyond/update`), and the `beyond` ubus object the app talks to (`usr/share/rpcd/ucode/beyond.uc`, with who may call what in `usr/share/rpcd/acl.d/beyond.json`).
+- `blocklists/big-tech-trackers/` is the Block Big Tech trackers list: `block.txt` and `allow.txt` are the source, and `node tools/trackers.mjs` makes the router's copy (`files/usr/share/beyond/big-tech-trackers.conf`) and the AdGuard Home and hosts versions. `tests/trackers.test.mjs` fails if a block would stop anything in `allow.txt`.
 - `web/` is the app: React, Vite and Tailwind, with its parts from ReUI (shadcn's `base-nova` style on Base UI), served by the router at `/beyond/`.
 - `tests/` runs with `sh tests/run.sh`.
 

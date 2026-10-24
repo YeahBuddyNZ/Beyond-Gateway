@@ -196,6 +196,18 @@ export const HELP: Topic[] = [
         ],
       },
       {
+        id: "trackers",
+        title: "Block Big Tech trackers",
+        words: "ads tracking telemetry google facebook meta amazon microsoft tiktok apple x twitter pixel analytics block privacy",
+        body: [
+          "**Settings**, **Block Big Tech trackers**. It stops the ads, tracking and telemetry of the companies on Beyond's tech fines tracker at gobeyond.nz/tech-fines (Google, Apple, Meta, Amazon, Microsoft, TikTok and X), for every device in the house. It's off until you turn it on.",
+          "Only their tracking is blocked, never what makes their products work: YouTube, Facebook, Instagram, sign-ins, the App Store, Google Play, maps, phone notifications and updates all keep working.",
+          "Some free TV apps show ads inside the programme. Their ad breaks still play, because a few apps stop altogether without them.",
+          "A site's \"Log in with Facebook\" button or a Facebook comment box may not show while it's on. Turn it off and it's back straight away.",
+          "Some phones and browsers look up addresses their own private way and skip the router, so the block doesn't reach them.",
+        ],
+      },
+      {
         id: "privacy",
         title: "Privacy",
         words: "privacy data tracking what does it send",

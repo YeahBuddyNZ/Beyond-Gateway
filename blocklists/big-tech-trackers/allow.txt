@@ -1,0 +1,141 @@
+# Block Big Tech trackers: what must keep working.
+#
+# Every address Beyond's own products and sites call (gobeyond.nz, Beyond Family, Beyond Spaces, Beyond TV, Beyond
+# Gateway, the socials hub, Beyond Growth's ads work), plus what phones, TVs and computers need to say they're online.
+# tests/trackers.test.mjs fails if anything in block.txt would stop one of these. An entry here that sits under a
+# blocked domain becomes an exception in every list.
+#
+# One domain per line. A domain covers itself and every name under it, except a name block.txt lists on purpose.
+# "#" starts a note. After a change run: node tools/trackers.mjs
+
+# Phones, TVs and computers checking they're online. Block these and devices say "no internet".
+connectivitycheck.gstatic.com      # Android and Google TV
+clients3.google.com                # Android
+captive.apple.com                  # iPhone, iPad, Mac, Apple TV
+www.msftconnecttest.com            # Windows
+
+# Alphabet (Google)
+accounts.google.com                # Google sign-in (website admin, Google Business Profile)
+oauth2.googleapis.com              # Google sign-in tokens (gobeyond.nz)
+www.googleapis.com                 # Google APIs (gobeyond.nz, Beyond Family)
+mybusiness.googleapis.com          # Google Business Profile (gobeyond.nz)
+mybusinessaccountmanagement.googleapis.com
+mybusinessbusinessinformation.googleapis.com
+maps.googleapis.com                # maps (Beyond Family)
+maps.google.com                    # map links (Beyond Family)
+fonts.googleapis.com               # web fonts (Beyond Family)
+fonts.gstatic.com                  # web fonts
+www.google.com                     # Google search and sign-in pages
+calendar.google.com                # calendar links (Beyond Family)
+analytics.google.com               # the Google Analytics dashboard Beyond Family links to (its collection is blocked)
+tagmanager.google.com              # the Tag Manager dashboard
+ads.google.com                     # Google Ads, for Beyond Growth's ads work
+business.google.com                # Google Business Profile
+www.youtube.com                    # YouTube (Beyond TV, Beyond Family)
+www.youtube-nocookie.com           # YouTube embeds (Beyond TV, Beyond Family)
+music.youtube.com
+i.ytimg.com                        # YouTube pictures
+dl.google.com                      # Android and Google TV downloads (Beyond TV install)
+play.googleapis.com                # Google Play, for installing Beyond TV
+android.clients.google.com         # Google Play and Android sign-in
+fcm.googleapis.com                 # phone notifications
+imasdk.googleapis.com              # video players: some stop playing when their ad player can't load
+dai.google.com                     # streams with ad breaks stitched in: blocking stops the stream itself
+pubads.g.doubleclick.net           # free streaming apps fetch ad breaks here; some stop playing without it (see the doc)
+
+# Apple
+apple.com                          # App Store, TestFlight (Beyond Spaces builds), Apple developer and sign-in
+apps.apple.com
+testflight.apple.com
+appstoreconnect.apple.com
+developer.apple.com
+push.apple.com                     # phone notifications
+icloud.com
+
+# Meta: the socials hub, Beyond Growth's ads work, and the apps themselves
+www.facebook.com
+facebook.com
+graph.facebook.com                 # the Graph API (socials hub posting, Meta Business Suite)
+business.facebook.com
+adsmanager.facebook.com
+developers.facebook.com            # the "Beyond Socials" developer app
+fbcdn.net                          # Facebook and Instagram pictures and video
+www.instagram.com
+graph.instagram.com
+cdninstagram.com
+www.threads.net
+graph.threads.net
+whatsapp.com
+whatsapp.net
+
+# Amazon
+aws.amazon.com
+amazonaws.com                      # AWS, which Supabase and Render run on
+www.amazon.com
+amzn.to
+
+# Microsoft and LinkedIn
+www.linkedin.com
+api.linkedin.com                   # socials hub posting (Beyond Socials LinkedIn app)
+static.licdn.com                   # LinkedIn's pages
+media.licdn.com                    # LinkedIn's pictures
+login.microsoftonline.com          # Microsoft sign-in
+login.live.com
+windowsupdate.com                  # Windows updates
+update.microsoft.com
+settings-win.data.microsoft.com    # Windows settings, which Windows Update relies on
+www.microsoft.com
+
+# ByteDance (TikTok)
+www.tiktok.com
+ads.tiktok.com                     # TikTok Ads Manager, for Beyond Growth
+business-api.tiktok.com            # TikTok for Business API (Beyond's ads connector)
+open.tiktokapis.com                # TikTok posting (socials hub)
+developers.tiktok.com
+
+# X
+x.com
+api.x.com                          # socials hub posting
+api.twitter.com
+ads-api.x.com
+ads-api.twitter.com
+abs.twimg.com
+pbs.twimg.com
+
+# Beyond's own sites and the services they run on
+gobeyond.nz
+gobeyond.co.nz
+beyondfamily.app
+beyondfamily.co.nz
+beyondspaces.nz
+vercel.com
+vercel.app
+supabase.co
+supabase.com
+resend.com
+cloudflare.com
+cloudflare-dns.com
+github.com                         # Beyond Gateway's own updates come from GitHub releases
+api.github.com
+objects.githubusercontent.com
+raw.githubusercontent.com
+canva.com
+stripe.com
+js.stripe.com
+m.stripe.network                   # Stripe's card checks at checkout
+api.stripe.com
+xero.com
+api.sitehost.nz
+slack.com
+plausible.io                       # gobeyond.nz's own visitor counts (no cookies, no personal data)
+render.com
+onrender.com                       # Beyond Family runs on Render
+pbtech.co.nz
+unitree.com
+claude.ai
+api.anthropic.com
+api.themoviedb.org                 # Beyond TV
+image.tmdb.org
+api.watchmode.com
+plex.tv
+open-meteo.com

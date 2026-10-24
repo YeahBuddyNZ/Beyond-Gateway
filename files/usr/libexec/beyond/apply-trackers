@@ -1,0 +1,25 @@
+#!/bin/sh
+# Block Big Tech trackers: points the router's DNS (dnsmasq) at Beyond's list when beyond.privacy.block_trackers is 1,
+# and takes it away when it's 0. Off by default. The list is /usr/share/beyond/big-tech-trackers.conf, made by
+# tools/trackers.mjs, so each update brings the newest one.
+# It restarts DNS only when something changed, and takes the setting away if the list has gone, so DNS never points at
+# a list that isn't there (the init script runs it at boot for that).
+# Someone else's servers-file (their own ad blocker, set in Advanced settings) is never touched.
+
+LIST=${BEYOND_TRACKERS:-/usr/share/beyond/big-tech-trackers.conf}
+want=
+[ "$(uci -q get beyond.privacy.block_trackers)" = 1 ] && [ -f "$LIST" ] && want=$LIST
+have=$(uci -q get dhcp.@dnsmasq[0].serversfile)
+
+if [ -n "$want" ]; then
+	# Someone else's list is already there: leave it, and say so.
+	[ -n "$have" ] && [ "$have" != "$LIST" ] && { echo "in use: $have" >&2; exit 1; }
+	[ "$have" = "$LIST" ] && exit 0
+	uci set dhcp.@dnsmasq[0].serversfile="$LIST"
+else
+	[ "$have" = "$LIST" ] || exit 0
+	uci delete dhcp.@dnsmasq[0].serversfile
+fi
+uci commit dhcp
+/etc/init.d/dnsmasq restart >/dev/null 2>&1
+exit 0

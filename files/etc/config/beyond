@@ -7,3 +7,9 @@ config beyond 'main'
 # Updates: check each night; install by themselves only when a grown-up turns this on.
 config updates 'updates'
 	option auto '0'
+
+
+# Block Big Tech trackers: advertising, tracking and telemetry from the companies on gobeyond.nz/tech-fines. Off until
+# a grown-up turns it on (apply-trackers).
+config privacy 'privacy'
+	option block_trackers '0'

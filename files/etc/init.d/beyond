@@ -1,11 +1,12 @@
 #!/bin/sh /etc/rc.common
-# Beyond Gateway at boot: put back the paused devices, and keep looking for the internet until it is found.
+# Beyond Gateway at boot: put back the paused devices, check the tracker blocking still has its list, and keep looking for the internet until it is found.
 
 START=99
 USE_PROCD=1
 
 start_service() {
 	/usr/libexec/beyond/apply-pause --no-reload
+	/usr/libexec/beyond/apply-trackers
 
 	[ -n "$(uci -q get beyond.main.wan_mode)" ] && return 0
 	procd_open_instance wan-detect
