@@ -365,6 +365,27 @@ function family_state() {
 }
 
 
+// Block Big Tech trackers: on or off, how many domains the list blocks, and whether someone else's list is in the way.
+const TRACKERS = '/usr/share/beyond/big-tech-trackers.conf';
+
+function privacy_state() {
+	let c = cursor();
+	// The first dnsmasq, as apply-trackers' dhcp.@dnsmasq[0].
+	let have = null;
+	c.foreach('dhcp', 'dnsmasq', (s) => {
+		if (have == null) have = s.serversfile ?? '';
+	});
+	if (have == null) have = '';
+	let blocked = 0;
+	for (let line in split(readfile(TRACKERS) ?? '', '\n'))
+		if (match(line, /^server=\/[^\/#]+\/$/)) blocked++;
+	return {
+		on: c.get('beyond', 'privacy', 'block_trackers') == '1' && have == TRACKERS,
+		blocked,
+		other: have != '' && have != TRACKERS
+	};
+}
+
 const methods = {
 	setup_state: {
 		call: function() {
@@ -538,6 +559,32 @@ const methods = {
 			c.set('beyond', 'updates', 'auto', req.args.on ? '1' : '0');
 			c.commit('beyond');
 			return { ok: true };
+		}
+	},
+
+	// Block Big Tech trackers (files/usr/libexec/beyond/apply-trackers). "other" is a servers-file someone set up
+	// themselves in Advanced settings, which Beyond leaves alone.
+	privacy_state: {
+		call: function() {
+			return privacy_state();
+		}
+	},
+
+	privacy_set: {
+		args: { on: false },
+		call: function(req) {
+			let c = cursor();
+			if (!c.get('beyond', 'privacy')) c.set('beyond', 'privacy', 'privacy');
+			c.set('beyond', 'privacy', 'block_trackers', req.args.on ? '1' : '0');
+			c.commit('beyond');
+			if (system('/usr/libexec/beyond/apply-trackers >/dev/null 2>&1') != 0) {
+				c.set('beyond', 'privacy', 'block_trackers', '0');
+				c.commit('beyond');
+				return { ok: false, error: 'Another blocker is already set up in Advanced settings, so this one stays off.' };
+			}
+			let st = privacy_state();
+			st.ok = true;
+			return st;
 		}
 	},
 

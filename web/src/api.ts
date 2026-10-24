@@ -77,6 +77,8 @@ export const beyond = {
   meshRename: (a: { id: string; name: string }) => call("beyond", "mesh_rename", a),
   meshForget: (a: { id: string }) => call("beyond", "mesh_forget", a),
   meshLeave: () => call("beyond", "mesh_leave"),
+  privacyState: () => call("beyond", "privacy_state"),
+  privacySet: (a: { on: boolean }) => call("beyond", "privacy_set", a),
 }
 
 export async function signIn(password: string) {

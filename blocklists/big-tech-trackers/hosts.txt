@@ -1,0 +1,43 @@
+# Block Big Tech trackers, made by tools/trackers.mjs from blocklists/big-tech-trackers/block.txt and allow.txt. Edit those, not this.
+# Advertising, tracking and telemetry from the companies on gobeyond.nz/tech-fines, never what their products need.
+# A hosts file only blocks the exact names listed; the other two lists also block every name under them.
+0.0.0.0 adnxs.com
+0.0.0.0 ads-twitter.com
+0.0.0.0 adservice.google.co.nz
+0.0.0.0 adservice.google.com
+0.0.0.0 amazon-adsystem.com
+0.0.0.0 an.facebook.com
+0.0.0.0 analytics-sg.tiktok.com
+0.0.0.0 analytics.tiktok.com
+0.0.0.0 api-adservices.apple.com
+0.0.0.0 app-measurement.com
+0.0.0.0 bat.bing.com
+0.0.0.0 books-analytics-events.apple.com
+0.0.0.0 browser.events.data.msn.com
+0.0.0.0 clarity.ms
+0.0.0.0 connect.facebook.net
+0.0.0.0 dc.ads.linkedin.com
+0.0.0.0 device-metrics-us-2.amazon.com
+0.0.0.0 device-metrics-us.amazon.com
+0.0.0.0 doubleclick.net
+0.0.0.0 google-analytics.com
+0.0.0.0 googleadservices.com
+0.0.0.0 googlesyndication.com
+0.0.0.0 googletagmanager.com
+0.0.0.0 googletagservices.com
+0.0.0.0 iadsdk.apple.com
+0.0.0.0 mobile.events.data.microsoft.com
+0.0.0.0 notes-analytics-events.apple.com
+0.0.0.0 pangle.io
+0.0.0.0 pangleglobal.com
+0.0.0.0 pixel.facebook.com
+0.0.0.0 px.ads.linkedin.com
+0.0.0.0 region1.analytics.google.com
+0.0.0.0 region1.google-analytics.com
+0.0.0.0 snap.licdn.com
+0.0.0.0 telemetry.microsoft.com
+0.0.0.0 unagi-na.amazon.com
+0.0.0.0 unagi.amazon.com
+0.0.0.0 vortex-win.data.microsoft.com
+0.0.0.0 vortex.data.microsoft.com
+0.0.0.0 weather-analytics-events.apple.com

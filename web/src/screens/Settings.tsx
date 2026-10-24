@@ -10,6 +10,7 @@ import { PageTitle, Shell } from "./Shell"
 import { Updates } from "./Updates"
 import { FamilyLink } from "./FamilyLink"
 import { MeshPoints } from "./MeshPoints"
+import { Trackers } from "./Trackers"
 import { HelpLink } from "@/components/help-link"
 
 function Facts({ rows }: { rows: Array<[string, React.ReactNode]> }) {
@@ -48,6 +49,8 @@ export function Settings() {
       <MeshPoints />
 
       <FamilyLink />
+
+      <Trackers />
 
       <Card>
         <CardHeader>

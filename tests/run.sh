@@ -4,6 +4,7 @@ set -e
 cd "$(dirname "$0")/.."
 sh tests/wan-detect.test.sh
 sh tests/apply-pause.test.sh
+sh tests/apply-trackers.test.sh
 sh tests/update.test.sh
 sh tests/family.test.sh
 sh tests/mesh.test.sh

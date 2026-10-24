@@ -8,6 +8,7 @@ let rx = 8e9, tx = 1.2e9;
 let ssid = 'Aroha Whare';
 let key = 'kumara-pie-42';
 // ?preview&update shows a new version waiting.
+const privacy = { on: false };
 const update = { status: /update/.test(location.search) ? 'available' : 'current', auto: false, checked: start - 3600 * 5 };
 const updateState = () => ({
 	version: '1.141', build: 141, enabled: true, auto: update.auto, status: update.status, checked: update.checked,
@@ -84,6 +85,8 @@ const handlers = {
 	update_check: () => { update.checked = now(); return updateState(); },
 	update_install: () => { update.status = 'installing'; return { ok: true }; },
 	update_auto: (a) => { update.auto = !!a.on; return { ok: true }; },
+	privacy_state: () => ({ on: privacy.on, blocked: 40, other: false }),
+	privacy_set: (a) => { privacy.on = !!a.on; return { ok: true, on: privacy.on, blocked: 40, other: false }; },
 	family_state: familyState,
 	family_link: () => { family.code = 'KQXRMB'; family.until = now() + 600; family.at = now(); return familyState(); },
 	family_unlink: () => { Object.assign(family, { linked: false, code: null, until: null }); return familyState(); }

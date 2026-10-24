@@ -1,0 +1,63 @@
+# Block Big Tech trackers: what is blocked.
+#
+# The companies are the ones on Beyond's tech fines tracker (gobeyond.nz/tech-fines): Alphabet, Apple, Meta, Amazon,
+# Microsoft, ByteDance and X. Only their advertising, tracking and telemetry addresses are here, never the ones their
+# products or Beyond's own products need to work. Those are in allow.txt, and tests/trackers.test.mjs checks that
+# nothing here blocks anything there.
+#
+# One domain per line. A domain blocks itself and every name under it. "#" starts a note.
+# After a change run: node tools/trackers.mjs
+
+# Alphabet (Google)
+doubleclick.net                    # ads and ad measurement across the web
+googleadservices.com               # ad clicks and conversions
+googlesyndication.com              # AdSense ads on other sites
+googletagservices.com              # ad tags
+googletagmanager.com               # Tag Manager and gtag.js, which load Google Analytics and ad tags
+google-analytics.com               # Google Analytics collection
+region1.analytics.google.com       # Google Analytics 4 collection (the dashboard, analytics.google.com, stays)
+region1.google-analytics.com       # Google Analytics 4 collection
+adservice.google.com               # ad personalisation
+adservice.google.co.nz             # ad personalisation, New Zealand
+app-measurement.com                # Google Analytics for Firebase, inside phone apps
+
+# Apple
+iadsdk.apple.com                   # in-app ads
+api-adservices.apple.com           # ad attribution for App Store ads
+books-analytics-events.apple.com   # Books analytics
+notes-analytics-events.apple.com   # Notes analytics
+weather-analytics-events.apple.com # Weather analytics
+
+# Meta (Facebook, Instagram, WhatsApp)
+connect.facebook.net               # the Meta Pixel and Facebook's script on other sites
+pixel.facebook.com                 # Meta Pixel
+an.facebook.com                    # Audience Network, Meta's ads inside other apps
+
+# Amazon
+amazon-adsystem.com                # Amazon's ads on other sites and apps
+device-metrics-us.amazon.com       # Fire TV, Echo and Kindle usage reports
+device-metrics-us-2.amazon.com     # Fire TV, Echo and Kindle usage reports
+unagi.amazon.com                   # app usage reports
+unagi-na.amazon.com                # app usage reports
+
+# Microsoft (and LinkedIn)
+vortex.data.microsoft.com          # Windows and Office telemetry
+vortex-win.data.microsoft.com      # Windows telemetry
+mobile.events.data.microsoft.com   # Office and Teams telemetry
+browser.events.data.msn.com        # Edge and MSN telemetry
+telemetry.microsoft.com            # Windows error and usage reports
+bat.bing.com                       # Microsoft Advertising (Bing ads) tracking tag
+clarity.ms                         # Microsoft Clarity, which records visits to other sites
+adnxs.com                          # Xandr, Microsoft's ad exchange
+px.ads.linkedin.com                # LinkedIn Insight Tag
+dc.ads.linkedin.com                # LinkedIn Insight Tag
+snap.licdn.com                     # LinkedIn Insight Tag script (LinkedIn's pictures and pages, static.licdn.com and media.licdn.com, stay)
+
+# ByteDance (TikTok)
+analytics.tiktok.com               # TikTok Pixel
+analytics-sg.tiktok.com            # TikTok Pixel
+pangle.io                          # Pangle, ByteDance's ads inside other apps
+pangleglobal.com                   # Pangle
+
+# X
+ads-twitter.com                    # X Pixel and conversion tag
